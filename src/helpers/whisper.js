@@ -387,6 +387,7 @@ class WhisperManager {
     }
 
     const possiblePaths = [
+      "/Users/luiscoy/kiro-workspace/open-wispr/whisper-venv/bin/python3",
       "python3.11",
       "python3",
       "python",

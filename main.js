@@ -1,4 +1,4 @@
-const { app, globalShortcut, BrowserWindow } = require("electron");
+const { app, globalShortcut, BrowserWindow, systemPreferences } = require("electron");
 
 // Add global error handling for uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -50,6 +50,24 @@ function setupProductionPath() {
   }
 }
 
+
+// Request microphone permission on macOS
+async function requestMicrophonePermission() {
+  if (process.platform === 'darwin') {
+    const micStatus = systemPreferences.getMediaAccessStatus('microphone');
+    console.log('Current microphone permission status:', micStatus);
+    
+    if (micStatus !== 'granted') {
+      console.log('Requesting microphone permission...');
+      const granted = await systemPreferences.askForMediaAccess('microphone');
+      console.log('Microphone permission granted:', granted);
+      return granted;
+    }
+    return true;
+  }
+  return true;
+}
+
 // Set up PATH before initializing managers
 setupProductionPath();
 
@@ -74,6 +92,9 @@ const ipcHandlers = new IPCHandlers({
 // Main application startup
 async function startApp() {
   // In development, add a small delay to let Vite start properly
+  // Request microphone permission FIRST on macOS
+  await requestMicrophonePermission();
+
   if (process.env.NODE_ENV === "development") {
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
