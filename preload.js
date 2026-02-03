@@ -91,6 +91,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // External link opener
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
+
+  // AWS Bedrock functions
+  getAWSCredentials: () => ipcRenderer.invoke("get-aws-credentials"),
+  saveAWSCredentials: (creds) => ipcRenderer.invoke("save-aws-credentials", creds),
+  invokeBedrockModel: (params) => ipcRenderer.invoke("invoke-bedrock-model", params),
+  getAnthropicKey: () => ipcRenderer.invoke("get-anthropic-key"),
+  saveAnthropicKey: (key) => ipcRenderer.invoke("save-anthropic-key", key),
   
   // Remove all listeners for a channel
   removeAllListeners: (channel) => {
