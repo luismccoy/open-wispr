@@ -53,6 +53,9 @@ export default function SettingsPage({
     reasoningProvider,
     openaiApiKey,
     anthropicApiKey,
+    awsAccessKeyId,
+    awsSecretAccessKey,
+    awsRegion,
     dictationKey,
     setUseLocalWhisper,
     setWhisperModel,
@@ -65,6 +68,9 @@ export default function SettingsPage({
     setReasoningProvider,
     setOpenaiApiKey,
     setAnthropicApiKey,
+    setAwsAccessKeyId,
+    setAwsSecretAccessKey,
+    setAwsRegion,
     setDictationKey,
     updateTranscriptionSettings,
     updateReasoningSettings,
@@ -166,6 +172,8 @@ export default function SettingsPage({
     updateApiKeys({
       ...(reasoningProvider === "openai" &&
         openaiApiKey.trim() && { openaiApiKey }),
+      ...(reasoningProvider === "bedrock" &&
+        awsAccessKeyId.trim() && { awsAccessKeyId, awsSecretAccessKey, awsRegion }),
       ...(reasoningProvider === "anthropic" &&
         anthropicApiKey.trim() && { anthropicApiKey }),
     });
@@ -186,6 +194,9 @@ export default function SettingsPage({
     reasoningProvider,
     openaiApiKey,
     anthropicApiKey,
+    awsAccessKeyId,
+    awsSecretAccessKey,
+    awsRegion,
     updateReasoningSettings,
     updateApiKeys,
     showAlertDialog,
@@ -821,6 +832,49 @@ export default function SettingsPage({
                       setApiKey={setOpenaiApiKey}
                       helpText="Same as your transcription API key"
                     />
+                  </div>
+                )}
+
+                {reasoningProvider === "bedrock" && (
+                  <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <h4 className="font-medium text-orange-900">
+                      AWS Bedrock Credentials
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-orange-700 mb-1">Access Key ID</label>
+                        <Input
+                          type="password"
+                          placeholder="AKIA..."
+                          value={awsAccessKeyId}
+                          onChange={(e) => setAwsAccessKeyId(e.target.value)}
+                          className="text-sm border-orange-300 focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-orange-700 mb-1">Secret Access Key</label>
+                        <Input
+                          type="password"
+                          placeholder="Secret key..."
+                          value={awsSecretAccessKey}
+                          onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+                          className="text-sm border-orange-300 focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-orange-700 mb-1">Region</label>
+                        <Input
+                          type="text"
+                          placeholder="us-east-1"
+                          value={awsRegion}
+                          onChange={(e) => setAwsRegion(e.target.value)}
+                          className="text-sm border-orange-300 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-orange-600">
+                      Uses Claude models via AWS Bedrock. Get credentials from AWS IAM.
+                    </p>
                   </div>
                 )}
 

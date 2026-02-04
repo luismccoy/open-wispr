@@ -24,6 +24,9 @@ export interface HotkeySettings {
 export interface ApiKeySettings {
   openaiApiKey: string;
   anthropicApiKey: string;
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsRegion: string;
 }
 
 export function useSettings() {
@@ -81,7 +84,7 @@ export function useSettings() {
     }
   );
 
-  // Reasoning settings
+  // Reasoning settings - default to Bedrock with Claude 3.5 Sonnet v2
   const [useReasoningModel, setUseReasoningModel] = useLocalStorage(
     "useReasoningModel",
     true,
@@ -93,7 +96,7 @@ export function useSettings() {
 
   const [reasoningModel, setReasoningModel] = useLocalStorage(
     "reasoningModel",
-    "gpt-3.5-turbo",
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
     {
       serialize: String,
       deserialize: String,
@@ -109,6 +112,34 @@ export function useSettings() {
   const [anthropicApiKey, setAnthropicApiKey] = useLocalStorage(
     "anthropicApiKey",
     "",
+    {
+      serialize: String,
+      deserialize: String,
+    }
+  );
+
+  // AWS credentials for Bedrock
+  const [awsAccessKeyId, setAwsAccessKeyId] = useLocalStorage(
+    "awsAccessKeyId",
+    "",
+    {
+      serialize: String,
+      deserialize: String,
+    }
+  );
+
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useLocalStorage(
+    "awsSecretAccessKey",
+    "",
+    {
+      serialize: String,
+      deserialize: String,
+    }
+  );
+
+  const [awsRegion, setAwsRegion] = useLocalStorage(
+    "awsRegion",
+    "us-east-1",
     {
       serialize: String,
       deserialize: String,
@@ -165,8 +196,14 @@ export function useSettings() {
       if (keys.openaiApiKey !== undefined) setOpenaiApiKey(keys.openaiApiKey);
       if (keys.anthropicApiKey !== undefined)
         setAnthropicApiKey(keys.anthropicApiKey);
+      if (keys.awsAccessKeyId !== undefined)
+        setAwsAccessKeyId(keys.awsAccessKeyId);
+      if (keys.awsSecretAccessKey !== undefined)
+        setAwsSecretAccessKey(keys.awsSecretAccessKey);
+      if (keys.awsRegion !== undefined)
+        setAwsRegion(keys.awsRegion);
     },
-    [setOpenaiApiKey, setAnthropicApiKey]
+    [setOpenaiApiKey, setAnthropicApiKey, setAwsAccessKeyId, setAwsSecretAccessKey, setAwsRegion]
   );
 
   return {
@@ -181,6 +218,9 @@ export function useSettings() {
     reasoningProvider,
     openaiApiKey,
     anthropicApiKey,
+    awsAccessKeyId,
+    awsSecretAccessKey,
+    awsRegion,
     dictationKey,
     setUseLocalWhisper,
     setWhisperModel,
@@ -192,16 +232,20 @@ export function useSettings() {
     setReasoningModel,
     setReasoningProvider: (provider: string) => {
       const providerModels = {
+        bedrock: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
         openai: "gpt-3.5-turbo",
         anthropic: "claude-3-haiku-20240307",
       };
       setReasoningModel(
         providerModels[provider as keyof typeof providerModels] ||
-          "gpt-3.5-turbo"
+          "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
       );
     },
     setOpenaiApiKey,
     setAnthropicApiKey,
+    setAwsAccessKeyId,
+    setAwsSecretAccessKey,
+    setAwsRegion,
     setDictationKey,
     updateTranscriptionSettings,
     updateReasoningSettings,

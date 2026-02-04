@@ -66,6 +66,26 @@ export const getLanguageLabel = (code: string): string => {
 
 // Reasoning model configuration with provider abstraction
 export const REASONING_PROVIDERS = {
+  bedrock: {
+    name: "AWS Bedrock",
+    models: [
+      {
+        value: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        label: "Claude 3.5 Sonnet v2",
+        description: "Latest, recommended",
+      },
+      {
+        value: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+        label: "Claude 3.5 Sonnet",
+        description: "High quality",
+      },
+      {
+        value: "anthropic.claude-3-haiku-20240307-v1:0",
+        label: "Claude 3 Haiku",
+        description: "Fast and affordable",
+      },
+    ],
+  },
   openai: {
     name: "OpenAI",
     models: [
@@ -117,5 +137,5 @@ export const getReasoningModelLabel = (modelId: string): string => {
 export const getModelProvider = (modelId: string): string => {
   const allModels = getAllReasoningModels();
   const model = allModels.find((m) => m.value === modelId);
-  return model?.provider || "openai";
+  return model?.provider || "bedrock";
 };
