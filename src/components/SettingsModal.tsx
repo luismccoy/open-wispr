@@ -1,7 +1,6 @@
 import React from "react";
-import { Settings, Mic, Brain, User, Sparkles } from "lucide-react";
 import SidebarModal, { SidebarItem } from "./ui/SidebarModal";
-import SettingsPage, { SettingsSectionType } from "./SettingsPage";
+import SimpleSettings from "./SimpleSettings";
 
 interface SettingsModalProps {
   open: boolean;
@@ -12,27 +11,21 @@ export default function SettingsModal({
   open,
   onOpenChange,
 }: SettingsModalProps) {
-  const sidebarItems: SidebarItem<SettingsSectionType>[] = [
-    { id: "general", label: "General", icon: Settings },
-    { id: "transcription", label: "Transcription Mode", icon: Mic },
-    { id: "aiModels", label: "AI Models", icon: Brain },
-    { id: "agentConfig", label: "Agent Configuration", icon: User },
-    { id: "prompts", label: "AI Prompts", icon: Sparkles },
+  // Simplified - single settings page
+  const sidebarItems: SidebarItem<"settings">[] = [
+    { id: "settings", label: "Settings", icon: () => <span>⚙️</span> },
   ];
 
-  const [activeSection, setActiveSection] =
-    React.useState<SettingsSectionType>("general");
-
   return (
-    <SidebarModal<SettingsSectionType>
+    <SidebarModal<"settings">
       open={open}
       onOpenChange={onOpenChange}
       title="Settings"
       sidebarItems={sidebarItems}
-      activeSection={activeSection}
-      onSectionChange={setActiveSection}
+      activeSection="settings"
+      onSectionChange={() => {}}
     >
-      <SettingsPage activeSection={activeSection} />
+      <SimpleSettings onClose={() => onOpenChange(false)} />
     </SidebarModal>
   );
 }

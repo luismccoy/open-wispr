@@ -16,20 +16,22 @@ class HotkeyManager {
 
     try {
       // Register the new hotkey
+      console.log(`[HotkeyManager] Registering hotkey: ${hotkey}`);
       const success = globalShortcut.register(hotkey, callback);
 
       if (success) {
         this.currentHotkey = hotkey;
+        console.log(`[HotkeyManager] Hotkey registered successfully: ${hotkey}`);
         return { success: true, hotkey };
       } else {
-        console.error(`Failed to register hotkey: ${hotkey}`);
+        console.error(`[HotkeyManager] Failed to register hotkey: ${hotkey}`);
         return {
           success: false,
           error: `Failed to register hotkey: ${hotkey}`,
         };
       }
     } catch (error) {
-      console.error("Error setting up shortcuts:", error);
+      console.error("[HotkeyManager] Error setting up shortcuts:", error);
       return { success: false, error: error.message };
     }
   }
@@ -40,7 +42,9 @@ class HotkeyManager {
     }
 
     // Set up default hotkey first
-    this.setupShortcuts("`", callback);
+    const result = this.setupShortcuts("`", callback);
+    console.log(`[HotkeyManager] Initial hotkey setup result:`, result);
+    console.log(`[HotkeyManager] Is hotkey registered:`, this.isHotkeyRegistered("`"));
 
     // Listen for window to be ready, then get saved hotkey
     mainWindow.webContents.once("did-finish-load", () => {

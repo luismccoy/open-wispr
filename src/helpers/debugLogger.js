@@ -6,7 +6,7 @@ class DebugLogger {
   constructor() {
     // Only enable debug mode when explicitly requested
     this.debugMode =
-      process.env.OPENWISPR_DEBUG === "true" ||
+      process.env.OLLIE_DEBUG === "true" ||
       process.argv.includes("--debug") ||
       this.checkDebugFile();
     this.logFile = null;
@@ -79,67 +79,6 @@ class DebugLogger {
     }
   }
 
-  logFFmpegDebug(context, ffmpegPath, additionalInfo = {}) {
-    if (!this.debugMode) return;
-
-    const debugInfo = {
-      context,
-      ffmpegPath,
-      exists: ffmpegPath ? fs.existsSync(ffmpegPath) : false,
-      ...additionalInfo,
-    };
-
-    if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-      try {
-        const stats = fs.statSync(ffmpegPath);
-        debugInfo.fileInfo = {
-          size: stats.size,
-          isFile: stats.isFile(),
-          isExecutable: !!(stats.mode & fs.constants.X_OK),
-          permissions: stats.mode.toString(8),
-          modified: stats.mtime,
-        };
-      } catch (e) {
-        debugInfo.statError = e.message;
-      }
-    }
-
-    // Check parent directory permissions
-    if (ffmpegPath) {
-      const dir = path.dirname(ffmpegPath);
-      try {
-        fs.accessSync(dir, fs.constants.R_OK);
-        debugInfo.dirReadable = true;
-      } catch (e) {
-        debugInfo.dirReadable = false;
-        debugInfo.dirError = e.message;
-      }
-    }
-
-    // Check all possible FFmpeg locations
-    const possiblePaths = [
-      ffmpegPath,
-      ffmpegPath?.replace("app.asar", "app.asar.unpacked"),
-      path.join(
-        process.resourcesPath || "",
-        "app.asar.unpacked",
-        "node_modules",
-        "ffmpeg-static",
-        process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg"
-      ),
-      "/usr/local/bin/ffmpeg",
-      "/opt/homebrew/bin/ffmpeg",
-      "/usr/bin/ffmpeg",
-    ].filter(Boolean);
-
-    debugInfo.pathChecks = possiblePaths.map((p) => ({
-      path: p,
-      exists: fs.existsSync(p),
-    }));
-
-    this.log(`🎬 FFmpeg Debug - ${context}`, debugInfo);
-  }
-
   logAudioData(context, audioBlob) {
     if (!this.debugMode) return;
 
@@ -179,12 +118,6 @@ class DebugLogger {
       command,
       args,
       cwd: options.cwd || process.cwd(),
-      env: {
-        FFMPEG_PATH: options.env?.FFMPEG_PATH,
-        FFMPEG_EXECUTABLE: options.env?.FFMPEG_EXECUTABLE,
-        FFMPEG_BINARY: options.env?.FFMPEG_BINARY,
-        PATH_preview: options.env?.PATH?.substring(0, 200) + "...",
-      },
     });
   }
 
@@ -195,12 +128,6 @@ class DebugLogger {
     if (output) {
       this.log(`📝 ${processName} ${type}:`, output);
     }
-  }
-
-  logWhisperPipeline(stage, details) {
-    if (!this.debugMode) return;
-
-    this.log(`🎙️ Whisper Pipeline - ${stage}`, details);
   }
 
   getLogPath() {

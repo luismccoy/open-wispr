@@ -15,11 +15,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteTranscription: (id) =>
     ipcRenderer.invoke("db-delete-transcription", id),
 
-  // Environment variables
-  getOpenAIKey: () => ipcRenderer.invoke("get-openai-key"),
-  saveOpenAIKey: (key) => ipcRenderer.invoke("save-openai-key", key),
-  createProductionEnvFile: (key) =>
-    ipcRenderer.invoke("create-production-env-file", key),
+  // Environment variables - OpenAI removed per R3, AWS is the sole provider
+  // AWS credentials are managed via ~/.aws/credentials or environment variables
 
   // Settings management
   saveSettings: (settings) => ipcRenderer.invoke("save-settings", settings),
@@ -27,34 +24,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Clipboard functions
   readClipboard: () => ipcRenderer.invoke("read-clipboard"),
   writeClipboard: (text) => ipcRenderer.invoke("write-clipboard", text),
-
-  // Python installation functions
-  checkPythonInstallation: () =>
-    ipcRenderer.invoke("check-python-installation"),
-  installPython: () => ipcRenderer.invoke("install-python"),
-  onPythonInstallProgress: (callback) =>
-    ipcRenderer.on("python-install-progress", callback),
-
-  // Local Whisper functions
-  transcribeLocalWhisper: (audioBlob, options) =>
-    ipcRenderer.invoke("transcribe-local-whisper", audioBlob, options),
-  checkWhisperInstallation: () =>
-    ipcRenderer.invoke("check-whisper-installation"),
-  installWhisper: () => ipcRenderer.invoke("install-whisper"),
-  onWhisperInstallProgress: (callback) =>
-    ipcRenderer.on("whisper-install-progress", callback),
-  downloadWhisperModel: (modelName) =>
-    ipcRenderer.invoke("download-whisper-model", modelName),
-  onWhisperDownloadProgress: (callback) =>
-    ipcRenderer.on("whisper-download-progress", callback),
-  checkModelStatus: (modelName) =>
-    ipcRenderer.invoke("check-model-status", modelName),
-  listWhisperModels: () => ipcRenderer.invoke("list-whisper-models"),
-  deleteWhisperModel: (modelName) =>
-    ipcRenderer.invoke("delete-whisper-model", modelName),
-  cancelWhisperDownload: () => ipcRenderer.invoke("cancel-whisper-download"),
-  checkFFmpegAvailability: () =>
-    ipcRenderer.invoke("check-ffmpeg-availability"),
 
   // Window control functions
   windowMinimize: () => ipcRenderer.invoke("window-minimize"),
@@ -98,6 +67,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
   invokeBedrockModel: (params) => ipcRenderer.invoke("invoke-bedrock-model", params),
   getAnthropicKey: () => ipcRenderer.invoke("get-anthropic-key"),
   saveAnthropicKey: (key) => ipcRenderer.invoke("save-anthropic-key", key),
+  debugLog: (message, data) => ipcRenderer.invoke("debug-log", message, data),
+  
+  // AWS Transcribe functions
+  transcribeAWS: (audioBuffer, options) => ipcRenderer.invoke("transcribe-aws", audioBuffer, options),
+  
+  // Streaming Transcription functions (real-time, low-latency)
+  streamingTranscribeStart: (options) => ipcRenderer.invoke("streaming-transcribe-start", options),
+  streamingTranscribeChunk: (audioBuffer) => ipcRenderer.invoke("streaming-transcribe-chunk", audioBuffer),
+  streamingTranscribeEnd: () => ipcRenderer.invoke("streaming-transcribe-end"),
+  streamingTranscribeAbort: () => ipcRenderer.invoke("streaming-transcribe-abort"),
+  streamingTranscribeStatus: () => ipcRenderer.invoke("streaming-transcribe-status"),
+  
+  // Streaming transcription event listeners
+  onStreamingPartial: (callback) => ipcRenderer.on("streaming-transcribe-partial", (_, data) => callback(data)),
+  onStreamingFinal: (callback) => ipcRenderer.on("streaming-transcribe-final", (_, data) => callback(data)),
+  onStreamingLanguage: (callback) => ipcRenderer.on("streaming-transcribe-language", (_, data) => callback(data)),
+  onStreamingError: (callback) => ipcRenderer.on("streaming-transcribe-error", (_, data) => callback(data)),
+  
+  // Context detection for style selection
+  getActiveAppContext: () => ipcRenderer.invoke("get-active-app-context"),
+  
+  // Connection warmup functions (for pre-initializing AWS connections)
+  connectionWarmup: (options) => ipcRenderer.invoke("connection-warmup", options),
+  connectionStatus: () => ipcRenderer.invoke("connection-status"),
+  connectionHealthCheck: () => ipcRenderer.invoke("connection-health-check"),
+  connectionIsReady: () => ipcRenderer.invoke("connection-is-ready"),
+  connectionReset: () => ipcRenderer.invoke("connection-reset"),
   
   // Remove all listeners for a channel
   removeAllListeners: (channel) => {

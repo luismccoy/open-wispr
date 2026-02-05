@@ -11,14 +11,14 @@ exports.default = async function notarizing(context) {
   const appName = context.packager.appInfo.productFilename;
   const appPath = path.join(appOutDir, `${appName}.app`);
 
-  console.log('Notarizing using keychain profile: openwispr-profile');
+  console.log('Notarizing using keychain profile: ollie-profile');
   console.log('Submitting app for notarization...');
   
   try {
     const result = await notarize({
       tool: 'notarytool',
       appPath,
-      keychainProfile: 'openwispr-profile',
+      keychainProfile: 'ollie-profile',
       staple: true
     });
     console.log('✓ Notarization completed successfully');

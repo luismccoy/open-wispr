@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
-import { LANGUAGE_OPTIONS, getLanguageLabel } from "../../utils/languages";
+import { AWS_TRANSCRIBE_LANGUAGES, getLanguageLabel } from "../../utils/awsLanguages";
 
 interface LanguageSelectorProps {
   value: string;
@@ -19,7 +19,7 @@ export default function LanguageSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredLanguages = LANGUAGE_OPTIONS.filter(
+  const filteredLanguages = AWS_TRANSCRIBE_LANGUAGES.filter(
     (lang) =>
       lang.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lang.value.toLowerCase().includes(searchQuery.toLowerCase())

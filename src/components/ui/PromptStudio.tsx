@@ -82,22 +82,22 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
     try {
       // Check if reasoning model is enabled and if we have the necessary settings
       const useReasoningModel = localStorage.getItem("useReasoningModel") === "true";
-      const reasoningModel = localStorage.getItem("reasoningModel") || "gpt-3.5-turbo";
-      const reasoningProvider = localStorage.getItem("reasoningProvider") || "openai";
+      const reasoningModel = localStorage.getItem("reasoningModel") || "anthropic.claude-3-haiku-20240307-v1:0";
+      const reasoningProvider = localStorage.getItem("reasoningProvider") || "bedrock";
       
       if (!useReasoningModel) {
         setTestResult("⚠️ AI text enhancement is disabled. Enable it in AI Models settings to test prompts.");
         return;
       }
       
-      // Check if we have the required API key
-      const apiKey = reasoningProvider === "openai" 
-        ? localStorage.getItem("openaiApiKey")
-        : localStorage.getItem("anthropicApiKey");
-        
-      if (!apiKey || apiKey.trim() === "") {
-        setTestResult(`⚠️ No ${reasoningProvider === "openai" ? "OpenAI" : "Anthropic"} API key found. Add it in AI Models settings.`);
-        return;
+      // For Bedrock, credentials are loaded from ~/.aws/credentials
+      // For Anthropic, check for API key
+      if (reasoningProvider === "anthropic") {
+        const apiKey = localStorage.getItem("anthropicApiKey");
+        if (!apiKey || apiKey.trim() === "") {
+          setTestResult("⚠️ No Anthropic API key found. Add it in AI Models settings.");
+          return;
+        }
       }
       
       // Save current prompts temporarily so the test uses them
@@ -144,7 +144,7 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
           Current AI Prompts
         </h3>
         <p className="text-sm text-gray-600 mb-6">
-          These are the exact prompts currently being sent to your AI models. Understanding these helps you see how OpenWispr thinks!
+          These are the exact prompts currently being sent to your AI models. Understanding these helps you see how Ollie thinks!
         </p>
       </div>
 
@@ -254,8 +254,8 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
 
   const renderTestPlayground = () => {
     const useReasoningModel = localStorage.getItem("useReasoningModel") === "true";
-    const reasoningModel = localStorage.getItem("reasoningModel") || "gpt-3.5-turbo";
-    const reasoningProvider = localStorage.getItem("reasoningProvider") || "openai";
+    const reasoningModel = localStorage.getItem("reasoningModel") || "anthropic.claude-3-haiku-20240307-v1:0";
+    const reasoningProvider = localStorage.getItem("reasoningProvider") || "bedrock";
     
     return (
       <div className="space-y-6">

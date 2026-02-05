@@ -21,13 +21,22 @@ class WindowManager {
   async createMainWindow() {
     const display = screen.getPrimaryDisplay();
     const position = WindowPositionUtil.getMainWindowPosition(display);
+    
+    console.log('[WindowManager] Creating main window at position:', position);
+    console.log('[WindowManager] Display info:', {
+      bounds: display.bounds,
+      workArea: display.workArea
+    });
 
     this.mainWindow = new BrowserWindow({
       ...MAIN_WINDOW_CONFIG,
       ...position,
     });
 
+    console.log('[WindowManager] Main window created, loading content...');
     await this.loadMainWindow();
+    console.log('[WindowManager] Main window content loaded');
+    
     await this.initializeHotkey();
     this.dragManager.setTargetWindow(this.mainWindow);
     MenuManager.setupMainMenu();
@@ -58,11 +67,15 @@ class WindowManager {
     );
 
     this.mainWindow.webContents.on("did-finish-load", () => {
+      console.log('[WindowManager] Main window did-finish-load');
       // Ensure window is visible after loading
       setTimeout(() => {
         if (!this.mainWindow.isVisible()) {
+          console.log('[WindowManager] Window not visible, showing...');
           this.mainWindow.show();
           this.mainWindow.focus();
+        } else {
+          console.log('[WindowManager] Window is visible');
         }
       }, 1000);
     });
@@ -72,6 +85,8 @@ class WindowManager {
     this.mainWindow.on("show", () => {
       WindowPositionUtil.setupAlwaysOnTop(this.mainWindow);
     });
+    
+    console.log('[WindowManager] Main window setup complete');
   }
 
   async loadMainWindow() {
@@ -87,13 +102,44 @@ class WindowManager {
 
   async initializeHotkey() {
     const callback = () => {
+      console.log('[WindowManager] >>>>>> HOTKEY PRESSED! <<<<<<');
+      console.log('[WindowManager] mainWindow exists:', !!this.mainWindow);
+      console.log('[WindowManager] mainWindow visible:', this.mainWindow?.isVisible());
+      console.log('[WindowManager] mainWindow destroyed:', this.mainWindow?.isDestroyed());
+      
+      if (this.mainWindow.isDestroyed()) {
+        console.error('[WindowManager] Main window is destroyed!');
+        return;
+      }
+      
       if (!this.mainWindow.isVisible()) {
+        console.log('[WindowManager] Showing main window...');
         this.mainWindow.show();
       }
-      this.mainWindow.webContents.send("toggle-dictation");
+      
+      // Check if webContents is ready
+      const webContents = this.mainWindow.webContents;
+      console.log('[WindowManager] webContents exists:', !!webContents);
+      console.log('[WindowManager] webContents isLoading:', webContents?.isLoading());
+      console.log('[WindowManager] webContents isCrashed:', webContents?.isCrashed());
+      
+      if (webContents && !webContents.isLoading() && !webContents.isCrashed()) {
+        console.log('[WindowManager] Sending toggle-dictation to webContents...');
+        webContents.send("toggle-dictation");
+        console.log('[WindowManager] toggle-dictation sent!');
+      } else {
+        console.error('[WindowManager] webContents not ready, waiting...');
+        // Wait for page to load then send
+        webContents.once('did-finish-load', () => {
+          console.log('[WindowManager] Page loaded, sending toggle-dictation...');
+          webContents.send("toggle-dictation");
+        });
+      }
     };
 
+    console.log('[WindowManager] Initializing hotkey...');
     await this.hotkeyManager.initializeHotkey(this.mainWindow, callback);
+    console.log('[WindowManager] Hotkey initialized');
   }
 
   async updateHotkey(hotkey) {

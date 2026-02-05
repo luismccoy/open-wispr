@@ -1,5 +1,5 @@
 export const LANGUAGE_OPTIONS = [
-  { value: "auto", label: "Auto-detect" },
+  { value: "auto", label: "Auto-detect (Recommended)" },
   { value: "af", label: "Afrikaans" },
   { value: "ar", label: "Arabic" },
   { value: "hy", label: "Armenian" },
@@ -60,11 +60,13 @@ export const LANGUAGE_OPTIONS = [
 ];
 
 export const getLanguageLabel = (code: string): string => {
+  if (code === "auto") return "Auto-detect (Recommended)";
   const option = LANGUAGE_OPTIONS.find((lang) => lang.value === code);
   return option?.label || code;
 };
 
 // Reasoning model configuration with provider abstraction
+// Note: OpenAI removed per R3 - AWS Bedrock is the primary AI provider
 export const REASONING_PROVIDERS = {
   bedrock: {
     name: "AWS Bedrock",
@@ -83,21 +85,6 @@ export const REASONING_PROVIDERS = {
         value: "anthropic.claude-3-haiku-20240307-v1:0",
         label: "Claude 3 Haiku",
         description: "Fast and affordable",
-      },
-    ],
-  },
-  openai: {
-    name: "OpenAI",
-    models: [
-      {
-        value: "gpt-3.5-turbo",
-        label: "GPT-3.5 Turbo",
-        description: "Fast and efficient",
-      },
-      {
-        value: "gpt-4o-mini",
-        label: "GPT-4o Mini",
-        description: "Higher quality",
       },
     ],
   },

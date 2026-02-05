@@ -22,5 +22,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-  }
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
+    },
+  },
+  // Serve public directory for AudioWorklet files
+  publicDir: path.resolve(__dirname, 'public'),
 })

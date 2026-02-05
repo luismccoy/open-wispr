@@ -27,8 +27,8 @@ class UpdateManager {
     // Configure auto-updater for GitHub releases
     autoUpdater.setFeedURL({
       provider: "github",
-      owner: "HeroTools",
-      repo: "open-wispr",
+      owner: "luiscoy",
+      repo: "ollie",
       private: false,
     });
 

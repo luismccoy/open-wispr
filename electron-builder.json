@@ -1,13 +1,12 @@
 {
-  "appId": "com.herotools.openwispr",
-  "productName": "OpenWispr",
+  "appId": "com.luiscoy.ollie",
+  "productName": "Ollie",
   "directories": {
     "output": "dist"
   },
   "files": [
     "main.js",
     "preload.js",
-    "whisper_bridge.py",
     "package.json",
     "node_modules/**/*",
     "src/dist/**/*",
@@ -21,10 +20,7 @@
     "!node_modules/.cache/**/*",
     "!src/node_modules/**/*"
   ],
-  "asarUnpack": [
-    "whisper_bridge.py",
-    "**/node_modules/ffmpeg-static/**/*"
-  ],
+  "asarUnpack": [],
   "extraResources": [
     "assets/**/*"
   ],
@@ -42,8 +38,8 @@
     "identity": "HeroTools Inc. (9R85XFMH59)",
     "extendInfo": {
       "LSUIElement": true,
-      "NSMicrophoneUsageDescription": "OpenWispr needs microphone access for speech-to-text transcription.",
-      "NSAccessibilityUsageDescription": "OpenWispr needs accessibility permissions to paste transcribed text into other applications."
+      "NSMicrophoneUsageDescription": "Ollie needs microphone access for voice-to-text transcription.",
+      "NSAccessibilityUsageDescription": "Ollie needs accessibility permissions to paste transcribed text into other applications."
     }
   },
   "afterSign": "scripts/afterSign.js",
@@ -69,7 +65,7 @@
     "createStartMenuShortcut": true
   },
   "dmg": {
-    "title": "OpenWispr",
+    "title": "Ollie",
     "icon": "assets/icon.icns",
     "background": "assets/dmg-background.png",
     "window": {
@@ -79,8 +75,8 @@
   },
   "publish": {
     "provider": "github",
-    "owner": "HeroTools",
-    "repo": "open-wispr",
+    "owner": "luiscoy",
+    "repo": "ollie",
     "private": false,
     "releaseType": "release"
   }

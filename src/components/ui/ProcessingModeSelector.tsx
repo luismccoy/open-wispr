@@ -1,60 +1,66 @@
-import React from "react";
-import { Cloud, Lock } from "lucide-react";
+/**
+ * ProcessingModeSelector Component
+ * 
+ * A component for selecting between local (Whisper) and cloud (OpenAI) processing modes.
+ */
+
+import React from 'react';
+import { Cloud, Cpu } from 'lucide-react';
 
 interface ProcessingModeSelectorProps {
   useLocalWhisper: boolean;
   setUseLocalWhisper: (value: boolean) => void;
-  className?: string;
 }
 
-export default function ProcessingModeSelector({
-  useLocalWhisper,
-  setUseLocalWhisper,
-  className = "",
+export default function ProcessingModeSelector({ 
+  useLocalWhisper, 
+  setUseLocalWhisper 
 }: ProcessingModeSelectorProps) {
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${className}`}>
+    <div className="grid grid-cols-2 gap-4">
       <button
-        onClick={() => setUseLocalWhisper(false)}
-        className={`p-4 border-2 rounded-xl text-left transition-all cursor-pointer ${
-          !useLocalWhisper
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-neutral-200 bg-white hover:border-neutral-300"
-        }`}
+        type="button"
+        onClick={() => setUseLocalWhisper(true)}
+        className={`
+          p-4 rounded-xl border-2 text-left transition-all
+          ${useLocalWhisper 
+            ? 'border-blue-500 bg-blue-50' 
+            : 'border-gray-200 hover:border-gray-300'
+          }
+        `}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <Cloud className="w-6 h-6 text-blue-600" />
-            <h4 className="font-medium text-neutral-900">Cloud Processing</h4>
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`p-2 rounded-lg ${useLocalWhisper ? 'bg-blue-100' : 'bg-gray-100'}`}>
+            <Cpu className={`w-5 h-5 ${useLocalWhisper ? 'text-blue-600' : 'text-gray-600'}`} />
           </div>
-          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-            Fastest
-          </span>
+          <span className="font-semibold">Local Processing</span>
         </div>
-        <p className="text-sm text-neutral-600">
-          Audio sent to OpenAI servers. Faster processing, requires API key.
+        <p className="text-sm text-gray-600">
+          Process speech on your device using Whisper. 
+          More private, works offline.
         </p>
       </button>
 
       <button
-        onClick={() => setUseLocalWhisper(true)}
-        className={`p-4 border-2 rounded-xl text-left transition-all cursor-pointer ${
-          useLocalWhisper
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-neutral-200 bg-white hover:border-neutral-300"
-        }`}
+        type="button"
+        onClick={() => setUseLocalWhisper(false)}
+        className={`
+          p-4 rounded-xl border-2 text-left transition-all
+          ${!useLocalWhisper 
+            ? 'border-blue-500 bg-blue-50' 
+            : 'border-gray-200 hover:border-gray-300'
+          }
+        `}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <Lock className="w-6 h-6 text-blue-600" />
-            <h4 className="font-medium text-neutral-900">Local Processing</h4>
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`p-2 rounded-lg ${!useLocalWhisper ? 'bg-blue-100' : 'bg-gray-100'}`}>
+            <Cloud className={`w-5 h-5 ${!useLocalWhisper ? 'text-blue-600' : 'text-gray-600'}`} />
           </div>
-          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-            Private
-          </span>
+          <span className="font-semibold">Cloud Processing</span>
         </div>
-        <p className="text-sm text-neutral-600">
-          Audio stays on your device. Complete privacy, works offline.
+        <p className="text-sm text-gray-600">
+          Use OpenAI's servers for transcription. 
+          Faster, more accurate, requires API key.
         </p>
       </button>
     </div>

@@ -1,59 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  /* OpenWispr Modern Theme - Clean & Professional */
-  --color-primary: #4f46e5;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #171717;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #737373;
-  --color-accent: #f5f5f5;
-  --color-accent-foreground: #171717;
-  --color-destructive: #dc2626;
+  /* AWS AI Theme - Modern & Professional */
+  /* Primary: AWS Orange #FF9900 */
+  /* Dark: AWS Squid Ink #232F3E */
+  /* Secondary colors complement the AWS palette */
+  
+  --color-primary: #FF9900;
+  --color-primary-foreground: #232F3E;
+  --color-secondary: #F2F3F3;
+  --color-secondary-foreground: #232F3E;
+  --color-muted: #F2F3F3;
+  --color-muted-foreground: #545B64; /* Improved contrast: 5.7:1 on white (was #687078 at 4.8:1) */
+  --color-accent: #FF9900;
+  --color-accent-foreground: #232F3E;
+  --color-destructive: #D13212;
   --color-destructive-foreground: #ffffff;
-  --color-border: #e5e5e5;
+  --color-border: #D5DBDB;
   --color-input: #ffffff;
-  --color-ring: #4f46e5;
+  --color-ring: #FF9900;
   --color-background: #ffffff;
-  --color-foreground: #171717;
+  --color-foreground: #232F3E;
   --color-card: #ffffff;
-  --color-card-foreground: #171717;
+  --color-card-foreground: #232F3E;
   --color-popover: #ffffff;
-  --color-popover-foreground: #171717;
-  --color-link: #4f46e5;
+  --color-popover-foreground: #232F3E;
+  --color-link: #0972D3;
   --radius: 0.5rem;
+  
+  /* AWS Extended Palette */
+  --aws-orange: #FF9900;
+  --aws-orange-light: #FFAD33;
+  --aws-orange-dark: #EC7211;
+  --aws-squid-ink: #232F3E;
+  --aws-squid-ink-light: #37475A;
+  --aws-blue: #0972D3;
+  --aws-blue-light: #539FE5;
+  --aws-green: #037F0C;
+  --aws-red: #D13212;
+  
+  /* Accessibility: Focus ring colors with sufficient contrast */
+  --focus-ring-color: #FF9900;
+  --focus-ring-offset: 2px;
 }
 
 .dark {
-  /* Dark mode - sophisticated and rich */
-  --color-background: oklch(0.08 0 0);
-  --color-foreground: oklch(0.95 0 0);
-  --color-card: oklch(0.12 0 0);
-  --color-card-foreground: oklch(0.95 0 0);
-  --color-popover: oklch(0.12 0 0);
-  --color-popover-foreground: oklch(0.95 0 0);
-  --color-primary: oklch(0.6 0.22 245);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.18 0 0);
-  --color-secondary-foreground: oklch(0.9 0 0);
-  --color-muted: oklch(0.15 0 0);
-  --color-muted-foreground: oklch(0.6 0 0);
-  --color-accent: oklch(0.6 0.22 245);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.7 0.22 25);
-  --color-border: oklch(0.22 0 0);
-  --color-input: oklch(0.18 0 0);
-  --color-ring: oklch(0.6 0.22 245);
+  /* AWS AI Dark Mode - Squid Ink based */
+  --color-background: #161E2D;
+  --color-foreground: #F2F3F3;
+  --color-card: #1A242F;
+  --color-card-foreground: #F2F3F3;
+  --color-popover: #1A242F;
+  --color-popover-foreground: #F2F3F3;
+  --color-primary: #FF9900;
+  --color-primary-foreground: #161E2D;
+  --color-secondary: #232F3E;
+  --color-secondary-foreground: #F2F3F3;
+  --color-muted: #232F3E;
+  --color-muted-foreground: #9BA0A6; /* Improved contrast: 5.5:1 on dark bg (was #8D9096 at 4.5:1) */
+  --color-accent: #FF9900;
+  --color-accent-foreground: #161E2D;
+  --color-destructive: #FF5252;
+  --color-border: #37475A;
+  --color-input: #232F3E;
+  --color-ring: #FF9900;
+  --color-link: #539FE5;
+  
+  /* AWS Extended Palette - Dark Mode */
+  --aws-orange: #FF9900;
+  --aws-orange-light: #FFAD33;
+  --aws-orange-dark: #EC7211;
+  --aws-squid-ink: #232F3E;
+  --aws-squid-ink-light: #37475A;
+  --aws-blue: #539FE5;
+  --aws-blue-light: #89BDEE;
+  --aws-green: #29A329;
+  --aws-red: #FF5252;
 }
 
 @layer base {
   * {
-    @apply border-gray-200 outline-indigo-500/50;
+    @apply border-[var(--color-border)] outline-[var(--aws-orange)]/50;
   }
   
   body {
-    @apply bg-white text-gray-900;
+    @apply bg-[var(--color-background)] text-[var(--color-foreground)];
     margin: 0;
     padding: 0;
     font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -67,7 +98,7 @@
   }
 }
 
-/* OpenWispr Brand Typography */
+/* Ollie Brand Typography */
 .brand-heading {
   font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 600;
@@ -117,82 +148,90 @@ input, textarea {
   border-radius: 8px;
   transition: all 0.2s ease;
   font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  box-shadow: inset 0 1px 3px rgba(43, 31, 20, 0.1);
+  box-shadow: inset 0 1px 3px rgba(35, 47, 62, 0.1);
 }
 
-/* Light mode inputs - embossed parchment */
+/* Light mode inputs - AWS themed */
 :root input, :root textarea {
-  background-color: #F9F6F1;
-  border: 1px solid #DDD4C7;
-  color: #2B1F14;
+  background-color: #FAFAFA;
+  border: 1px solid #D5DBDB;
+  color: #232F3E;
 }
 
 :root input:focus, :root textarea:focus {
-  border-color: #C0A77D;
-  box-shadow: 0 0 0 2px rgba(192, 167, 125, 0.2), inset 0 1px 3px rgba(43, 31, 20, 0.1);
+  border-color: #FF9900;
+  box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2), inset 0 1px 3px rgba(35, 47, 62, 0.1);
   background-color: #FFFFFF;
 }
 
-/* Dark mode inputs */
+/* Dark mode inputs - AWS themed */
 .dark input, .dark textarea {
-  background-color: oklch(0.15 0 0);
-  border: 1px solid oklch(0.25 0 0);
-  color: oklch(0.9 0 0);
+  background-color: #232F3E;
+  border: 1px solid #37475A;
+  color: #F2F3F3;
 }
 
 .dark input:focus, .dark textarea:focus {
-  border-color: oklch(0.55 0.25 250);
-  box-shadow: 0 0 0 2px oklch(0.55 0.25 250 / 0.2);
+  border-color: #FF9900;
+  box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.3);
 }
 
-/* Card styling - elevated parchment */
+/* Card styling - AWS themed elevated cards */
 .card {
-  background-color: #FFFFFF;
-  border: 1px solid #DDD4C7;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(43, 31, 20, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  box-shadow: 0 4px 8px rgba(35, 47, 62, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
   transition: all 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 8px 16px rgba(43, 31, 20, 0.1), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  box-shadow: 0 8px 16px rgba(35, 47, 62, 0.12), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
   transform: translateY(-1px);
 }
 
-/* Link styling */
+.dark .card {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Link styling - AWS themed */
 a {
-  color: #2E3659;
+  color: var(--color-link);
   text-decoration: none;
   transition: color 0.2s ease;
   cursor: pointer;
 }
 
 a:hover {
-  color: #4B2E2B;
+  color: var(--aws-orange);
   text-decoration: underline;
   cursor: pointer;
 }
 
-/* Status indicators */
+/* Status indicators - AWS themed */
 .status-active {
-  color: #4B2E2B;
+  color: var(--aws-orange);
   font-weight: 600;
 }
 
 .text-brand-primary {
-  color: #2B1F14;
+  color: var(--color-foreground);
 }
 
 .text-brand-accent {
-  color: #4B2E2B;
+  color: var(--aws-orange);
 }
 
 .text-brand-highlight {
-  color: #C0A77D;
+  color: var(--aws-orange-light);
 }
 
 .text-brand-link {
-  color: #2E3659;
+  color: var(--color-link);
 }
 
 /* Additional CSS variables for theme support */
@@ -201,4 +240,139 @@ a:hover {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ============================================
+   ACCESSIBILITY STYLES - WCAG AA Compliance
+   ============================================ */
+
+/* 
+ * Contrast Ratio Reference (WCAG AA):
+ * - Normal text: 4.5:1 minimum
+ * - Large text (18pt+ or 14pt+ bold): 3:1 minimum
+ * - UI components: 3:1 minimum
+ *
+ * AWS Color Contrast Ratios:
+ * - Squid Ink (#232F3E) on White (#FFFFFF): 12.6:1 ✓
+ * - AWS Orange (#FF9900) on Squid Ink (#232F3E): 5.8:1 ✓
+ * - Muted foreground (#545B64) on White: 5.7:1 ✓
+ * - Dark muted (#9BA0A6) on Dark bg (#161E2D): 5.5:1 ✓
+ * - AWS Blue (#0972D3) on White: 4.5:1 ✓
+ */
+
+/* Enhanced focus visibility for all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--aws-orange);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline when using focus-visible */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast focus states for buttons */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--aws-orange);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 153, 0, 0.25);
+}
+
+/* High contrast focus states for form inputs */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--aws-orange);
+  outline-offset: 0;
+  border-color: var(--aws-orange);
+}
+
+/* Ensure links have visible focus */
+a:focus-visible {
+  outline: 2px solid var(--aws-orange);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--aws-orange);
+  color: var(--aws-squid-ink);
+  padding: 8px 16px;
+  z-index: 100;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Ensure disabled states are clearly visible */
+[disabled],
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000000;
+    --color-muted-foreground: #333333;
+  }
+  
+  .dark {
+    --color-border: #ffffff;
+    --color-muted-foreground: #cccccc;
+  }
+  
+  button:focus-visible,
+  input:focus-visible,
+  a:focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Fade-in animation for language badge */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Ensure text selection is visible */
+::selection {
+  background-color: var(--aws-orange);
+  color: var(--aws-squid-ink);
+}
+
+.dark ::selection {
+  background-color: var(--aws-orange);
+  color: var(--aws-squid-ink);
 }

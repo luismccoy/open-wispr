@@ -26,8 +26,6 @@ exports.default = async function(context) {
   
   // List of binaries that need to be signed with hardened runtime
   const binariesToSign = [
-    // ffmpeg-static binary
-    'Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg',
     // Electron Framework libraries
     'Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libEGL.dylib',
     'Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib',

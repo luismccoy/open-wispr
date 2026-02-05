@@ -1,111 +1,40 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to Ollie will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.0.2] - 2024-12-19
+## [1.1.0] - 2026-02-04
 
 ### Added
-- **Automatic Python Installation**: The app now detects and offers to install Python automatically
-  - macOS: Uses Homebrew if available, falls back to official installer
-  - Windows: Downloads and installs official Python with proper PATH configuration
-  - Linux: Uses system package manager (apt, yum, or pacman)
-- **Enhanced Developer Experience**: 
-  - Added MIT LICENSE file
-  - Improved documentation for personal vs distribution builds
-  - Added FAQ section to README
-  - Added security information section
-  - Clearer prerequisites and setup instructions
-  - Added comprehensive CLAUDE.md technical reference
-- **Dock Icon Support**: App now appears in the dock with activity indicator
-  - Changed LSUIElement from true to false in electron-builder.json
-  - App shows in dock on macOS with the standard dot indicator when running
+- Context-aware text styling - automatically adjusts formality based on active application
+- Real-time streaming transcription with AWS Transcribe Streaming
+- Auto-detect language support (no manual language selection required)
+- Connection pre-warming for faster first transcription
+- AWS connection health indicator in settings
+- Style mapping configuration in settings (formal/casual/neutral per app)
 
 ### Changed
-- Updated supported language count from 90+ to 58 (actual count in codebase)
-- Improved README structure for better open source experience
+- Simplified onboarding wizard (4-5 steps, AWS-only)
+- Updated UI with AWS AI theme (orange/dark blue color scheme)
+- Text enhancement enabled by default
+- Auto-detect language enabled by default
 
-## [1.0.1] - 2024-XX-XX
+### Improved
+- Transcription speed with streaming architecture
+- First-use experience with connection pre-warming
+- Settings UI organization
 
-### Added
-- **Agent Naming System**: Personalize your AI assistant with a custom name for more natural interactions
-  - Name your agent during onboarding (step 6 of 8)
-  - Address your agent directly: "Hey [AgentName], make this more professional"
-  - Update agent name anytime through settings
-  - Smart AI processing distinguishes between commands and regular dictation
-  - Clean output automatically removes agent name references
-- **Draggable Interface**: Click and drag the dictation panel to any position on screen
-- **Dynamic Hotkey Display**: Tooltip shows your actual hotkey setting instead of generic text
-- **Flexible Hotkey System**: Fixed hardcoded hotkey limitation - now fully respects user settings
+## [1.0.0] - 2026-02-03
 
 ### Changed
-- **[BREAKING]** Removed click-to-record functionality to prevent conflicts with dragging
-- **UI Behavior**: Recording is now exclusively controlled via hotkey (no accidental triggering)
-- **Tooltip Text**: Shows "Press {your-hotkey} to speak" with actual configured hotkey
-- **Cursor Styles**: Changed to grab/grabbing cursors to indicate draggable interface
+- Rebranded from OpenWispr to Ollie
+- Simplified to AWS-only transcription (removed local Whisper, OpenAI API)
+- Now uses AWS Transcribe Streaming for real-time speech-to-text
+- AWS Bedrock Claude for optional text enhancement
+
+### Removed
+- Local Whisper processing (Python dependency)
+- OpenAI API integration
+- FFmpeg dependency
 
 ### Fixed
-- **Hotkey Bug**: Fixed issue where hotkey setting was stored but not actually used by global shortcut
-- **Documentation**: Updated all docs to reflect current UI behavior and hotkey system
-- **User Experience**: Eliminated confusion between drag and click actions
-
-### Technical Details
-- **Agent Naming Implementation**:
-  - Added centralized agent name utility (`src/utils/agentName.ts`)
-  - Enhanced onboarding flow with agent naming step
-  - Updated ReasoningService with context-aware AI processing
-  - Added agent name settings section with comprehensive UI
-  - Implemented smart prompt generation for agent-addressed vs regular text
-- Added IPC handlers for dynamic hotkey updates (`update-hotkey`)
-- Implemented window-level dragging using screen cursor tracking
-- Added real-time hotkey loading from localStorage in main dictation component
-- Updated WindowManager to support runtime hotkey changes
-- Added proper drag state management with smooth 60fps window positioning
-- **Code Organization**: Extracted functionality into dedicated managers and React hooks:
-  - HotkeyManager, DragManager, AudioManager, MenuManager, DevServerManager
-  - useAudioRecording, useWindowDrag, useHotkey React hooks
-  - WindowConfig utility for centralized window configuration
-  - Reduced WindowManager from 465 to 190 lines through composition pattern
-
-## [0.1.0] - 2024-XX-XX
-
-### Added
-- Initial release of OpenWispr (formerly OpenWispr)
-- Desktop dictation application using OpenAI Whisper
-- Local and cloud-based speech-to-text transcription
-- Real-time audio recording and processing
-- Automatic text pasting via accessibility features
-- SQLite database for transcription history
-- macOS tray icon integration
-- Global hotkey support (backtick key)
-- Control panel for settings and configuration
-- Local Whisper model management
-- OpenAI API integration
-- Cross-platform support (macOS, Windows, Linux)
-
-### Features
-- **Speech-to-Text**: Convert voice to text using OpenAI Whisper
-- **Dual Processing**: Choose between local processing (private) or cloud processing (fast)
-- **Model Management**: Download and manage local Whisper models (tiny, base, small, medium, large)
-- **Transcription History**: View, copy, and delete past transcriptions
-- **Accessibility Integration**: Automatic text pasting with proper permission handling
-- **API Key Management**: Secure storage and management of OpenAI API keys
-- **Real-time UI**: Live feedback during recording and processing
-- **Global Hotkey**: Quick access via customizable keyboard shortcut
-- **Database Storage**: Persistent storage of transcriptions with SQLite
-- **Permission Management**: Streamlined macOS accessibility permission setup
-
-### Technical Stack
-- **Frontend**: React 19, Vite, TailwindCSS, Shadcn/UI components
-- **Backend**: Electron 36, Node.js
-- **Database**: better-sqlite3 for local storage
-- **AI Processing**: OpenAI Whisper (local and API)
-- **Build System**: Electron Builder for cross-platform packaging
-
-### Security
-- Local-first approach with optional cloud processing
-- Secure API key storage and management
-- Sandboxed renderer processes with context isolation
-- Proper clipboard and accessibility permission handling
+- AWS credentials loading from ~/.aws/credentials file

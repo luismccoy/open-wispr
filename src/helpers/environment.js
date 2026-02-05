@@ -37,41 +37,8 @@ class EnvironmentManager {
     }
   }
 
-  getOpenAIKey() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    return apiKey || "";
-  }
-
-  saveOpenAIKey(key) {
-    try {
-      // Update the environment variable in memory for immediate use
-      process.env.OPENAI_API_KEY = key;
-      return { success: true };
-    } catch (error) {
-      console.error("Error saving OpenAI API key:", error.message);
-      throw error;
-    }
-  }
-
-  createProductionEnvFile(apiKey) {
-    try {
-      const envPath = path.join(app.getPath("userData"), ".env");
-
-      const envContent = `# OpenWispr Environment Variables
-# This file was created automatically for production use
-OPENAI_API_KEY=${apiKey}
-`;
-
-      fs.writeFileSync(envPath, envContent, "utf8");
-
-      require("dotenv").config({ path: envPath });
-
-      return { success: true, path: envPath };
-    } catch (error) {
-      console.error("Error creating production .env file:", error.message);
-      throw error;
-    }
-  }
+  // Note: OpenAI key handling removed per R3 - AWS Transcribe is the sole transcription method
+  // AWS credentials are managed via ~/.aws/credentials or environment variables
 }
 
 module.exports = EnvironmentManager;

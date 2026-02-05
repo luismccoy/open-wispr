@@ -1,5 +1,6 @@
 import { getModelProvider } from "../utils/languages.ts";
 import { getAgentName } from "../utils/agentName.ts";
+import BedrockService from "./BedrockService.js";
 
 // Default prompts (fallback if no custom prompts are saved)
 export const DEFAULT_PROMPTS = {
@@ -134,61 +135,35 @@ class ReasoningService {
     this.apiKeyCache = new Map();
   }
 
-  async processText(text, model = "gpt-3.5-turbo") {
+  async processText(text, model = "anthropic.claude-3-haiku-20240307-v1:0") {
     const provider = getModelProvider(model);
+    window.electronAPI?.debugLog?.('ReasoningService.processText', { model, provider, textLength: text?.length });
+    console.log('[ReasoningService] processText called');
+    console.log('[ReasoningService] Model:', model);
+    console.log('[ReasoningService] Provider:', provider);
 
     try {
       switch (provider) {
-        case "openai":
-          return await this.processWithOpenAI(text, model);
         case "anthropic":
           return await this.processWithAnthropic(text, model);
+        case "bedrock":
+          window.electronAPI?.debugLog?.('Routing to Bedrock', { model });
+          console.log('[ReasoningService] Routing to Bedrock');
+          return await this.processWithBedrock(text, model);
         default:
-          throw new Error(`Unsupported reasoning provider: ${provider}`);
+          // OpenAI removed per R3 - default to Bedrock
+          window.electronAPI?.debugLog?.('Unknown provider, defaulting to Bedrock', { provider });
+          console.log('[ReasoningService] Unknown provider, defaulting to Bedrock');
+          return await this.processWithBedrock(text, "anthropic.claude-3-haiku-20240307-v1:0");
       }
     } catch (error) {
+      window.electronAPI?.debugLog?.('ReasoningService error', { provider, error: error.message });
       console.error(`ReasoningService error (${provider}):`, error.message);
       throw error;
     }
   }
 
-  async processWithOpenAI(text, model) {
-    const apiKey = await this.getAPIKey("openai");
-    const agentName = getAgentName();
-    const prompt = getReasoningPrompt(text, agentName).replace(
-      "{{text}}",
-      text
-    );
-    const maxTokens = Math.max(100, text.length * 2);
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.3,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API Error: ${response.status} - ${errorText}`);
-    }
-
-    const result = await response.json();
-    const reasonedText = result.choices[0]?.message?.content?.trim();
-
-    if (!reasonedText) {
-      throw new Error("Empty response from OpenAI");
-    }
-
-    return reasonedText;
-  }
+  // Note: processWithOpenAI removed per R3 - AWS Bedrock is the primary AI provider
 
   async processWithAnthropic(text, model) {
     const apiKey = await this.getAPIKey("anthropic");
@@ -229,6 +204,33 @@ class ReasoningService {
     return reasonedText;
   }
 
+  async processWithBedrock(text, model) {
+    window.electronAPI?.debugLog?.('processWithBedrock called', { model, textLength: text?.length });
+    console.log(`[ReasoningService] Processing with Bedrock model: ${model}`);
+    const agentName = getAgentName();
+    const prompt = getReasoningPrompt(text, agentName).replace(
+      "{{text}}",
+      text
+    );
+    
+    try {
+      window.electronAPI?.debugLog?.('Calling BedrockService.invokeModel', { model, promptLength: prompt?.length });
+      const result = await BedrockService.invokeModel(prompt, model);
+      window.electronAPI?.debugLog?.('Bedrock response received', { resultLength: result?.length });
+      console.log(`[ReasoningService] Bedrock response received`);
+      
+      if (!result || result.trim() === "") {
+        throw new Error("Empty response from Bedrock");
+      }
+      
+      return result.trim();
+    } catch (error) {
+      window.electronAPI?.debugLog?.('Bedrock error in ReasoningService', { error: error.message });
+      console.error(`[ReasoningService] Bedrock error:`, error);
+      throw new Error(`Bedrock API Error: ${error.message}`);
+    }
+  }
+
   async getAPIKey(provider) {
     // Check cache first
     if (this.apiKeyCache.has(provider)) {
@@ -238,11 +240,6 @@ class ReasoningService {
     let apiKey;
 
     switch (provider) {
-      case "openai":
-        apiKey =
-          (await window.electronAPI?.getOpenAIKey()) ||
-          localStorage.getItem("openaiApiKey");
-        break;
       case "anthropic":
         apiKey =
           (await window.electronAPI?.getAnthropicKey()) ||
@@ -254,8 +251,7 @@ class ReasoningService {
 
     if (
       !apiKey ||
-      apiKey.trim() === "" ||
-      apiKey === "your_openai_api_key_here"
+      apiKey.trim() === ""
     ) {
       throw new Error(`${provider} API key not found`);
     }

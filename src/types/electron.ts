@@ -5,40 +5,6 @@ export interface TranscriptionItem {
   created_at: string;
 }
 
-export interface WhisperInstallResult {
-  success: boolean;
-  message: string;
-  output: string;
-}
-
-export interface WhisperCheckResult {
-  installed: boolean;
-  working: boolean;
-  error?: string;
-}
-
-export interface WhisperModelResult {
-  success: boolean;
-  model: string;
-  downloaded: boolean;
-  size_mb?: number;
-  error?: string;
-}
-
-export interface WhisperModelDeleteResult {
-  success: boolean;
-  model: string;
-  deleted: boolean;
-  freed_mb?: number;
-  error?: string;
-}
-
-export interface WhisperModelsListResult {
-  success: boolean;
-  models: Array<{ model: string; downloaded: boolean; size_mb?: number }>;
-  cache_dir: string;
-}
-
 export interface UpdateCheckResult {
   updateAvailable: boolean;
   version?: string;
@@ -63,44 +29,9 @@ export interface AppVersionResult {
   version: string;
 }
 
-export interface WhisperDownloadProgressData {
-  type: string;
-  model: string;
-  percentage?: number;
-  downloaded_bytes?: number;
-  total_bytes?: number;
-  error?: string;
-  result?: any;
-}
-
-export interface WhisperInstallProgressData {
-  type: string;
-  message: string;
-  output?: string;
-}
-
-export interface PythonInstallation {
-  installed: boolean;
-  command?: string;
-  version?: number;
-}
-
-export interface PythonInstallResult {
-  success: boolean;
-  method: string;
-}
-
-export interface PythonInstallProgressData {
-  type: string;
-  stage: string;
-  percentage: number;
-}
-
-// Additional interface missing from preload.js
+// Additional interface for settings
 export interface SaveSettings {
-  useLocalWhisper: boolean;
   apiKey: string;
-  whisperModel: string;
   hotkey: string;
 }
 
@@ -121,46 +52,12 @@ declare global {
       clearTranscriptions: () => Promise<{ cleared: number; success: boolean }>;
       deleteTranscription: (id: number) => Promise<{ success: boolean }>;
 
-      // API key management
-      getOpenAIKey: () => Promise<string>;
-      saveOpenAIKey: (key: string) => Promise<{ success: boolean }>;
-      createProductionEnvFile: (key: string) => Promise<void>;
+      // API key management - OpenAI removed per R3, AWS is the sole provider
+      // AWS credentials are managed via ~/.aws/credentials or environment variables
 
       // Clipboard operations
       readClipboard: () => Promise<string>;
       writeClipboard: (text: string) => Promise<{ success: boolean }>;
-
-      // Python operations
-      checkPythonInstallation: () => Promise<PythonInstallation>;
-      installPython: () => Promise<PythonInstallResult>;
-      onPythonInstallProgress: (
-        callback: (event: any, data: PythonInstallProgressData) => void
-      ) => void;
-
-      // Whisper operations
-      transcribeLocalWhisper: (
-        audioBlob: Blob | ArrayBuffer,
-        options?: any
-      ) => Promise<any>;
-      checkWhisperInstallation: () => Promise<WhisperCheckResult>;
-      installWhisper: () => Promise<WhisperInstallResult>;
-      onWhisperInstallProgress: (
-        callback: (event: any, data: WhisperInstallProgressData) => void
-      ) => void;
-      downloadWhisperModel: (modelName: string) => Promise<WhisperModelResult>;
-      onWhisperDownloadProgress: (
-        callback: (event: any, data: WhisperDownloadProgressData) => void
-      ) => void;
-      checkModelStatus: (modelName: string) => Promise<WhisperModelResult>;
-      listWhisperModels: () => Promise<WhisperModelsListResult>;
-      deleteWhisperModel: (
-        modelName: string
-      ) => Promise<WhisperModelDeleteResult>;
-      cancelWhisperDownload: () => Promise<{
-        success: boolean;
-        message?: string;
-        error?: string;
-      }>;
 
       // Window control operations
       windowMinimize: () => Promise<void>;
@@ -200,6 +97,33 @@ declare global {
 
       // Hotkey management
       updateHotkey?: (key: string) => Promise<void>;
+
+      // AWS operations
+      getAWSCredentials?: () => Promise<{
+        accessKeyId: string;
+        secretAccessKey: string;
+        sessionToken?: string | null;
+      } | null>;
+      saveAWSCredentials?: (creds: {
+        accessKeyId: string;
+        secretAccessKey: string;
+        sessionToken?: string | null;
+      }) => Promise<{ success: boolean; error?: string }>;
+      invokeBedrockModel?: (params: {
+        modelId: string;
+        text: string;
+        region?: string;
+      }) => Promise<string>;
+      transcribeAWS?: (
+        audioBuffer: ArrayBuffer,
+        options?: { languageCode?: string; region?: string }
+      ) => Promise<{ success: boolean; text?: string; error?: string }>;
+
+      // Debug logging
+      debugLog?: (message: string, data?: any) => Promise<boolean>;
+
+      // Audio events
+      onNoAudioDetected?: (callback: () => void) => void;
     };
   }
 }

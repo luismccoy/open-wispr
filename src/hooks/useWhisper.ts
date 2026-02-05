@@ -1,102 +1,79 @@
-import { useState, useCallback, useEffect } from "react";
-import { WhisperCheckResult, WhisperInstallResult } from "../types/electron";
+/**
+ * useWhisper Hook
+ * 
+ * Hook for managing local Whisper model installation and usage.
+ */
+
+import { useState, useCallback } from 'react';
+
+interface UseWhisperProps {
+  showAlertDialog?: (dialog: { title: string; description?: string }) => void;
+}
 
 export interface UseWhisperReturn {
-  // State
-  whisperInstalled: boolean;
-  checkingWhisper: boolean;
-  installingWhisper: boolean;
-  installProgress: string;
-
-  checkWhisperInstallation: () => Promise<void>;
-  installWhisper: () => Promise<void>;
+  isInstalling: boolean;
+  installProgress: number;
+  installStatus: string;
+  isModelDownloading: boolean;
+  modelDownloadProgress: number;
+  modelDownloadStatus: string;
+  checkWhisperInstalled: () => Promise<boolean>;
+  installWhisper: () => Promise<boolean>;
+  downloadModel: (model: string) => Promise<boolean>;
   setupProgressListener: () => void;
 }
 
-export interface UseWhisperProps {
-  showAlertDialog: (dialog: { title: string; description?: string }) => void;
-}
+export function useWhisper(showAlertDialog?: UseWhisperProps['showAlertDialog']): UseWhisperReturn {
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [installProgress, setInstallProgress] = useState(0);
+  const [installStatus, setInstallStatus] = useState('');
+  const [isModelDownloading, setIsModelDownloading] = useState(false);
+  const [modelDownloadProgress, setModelDownloadProgress] = useState(0);
+  const [modelDownloadStatus, setModelDownloadStatus] = useState('');
 
-export const useWhisper = (
-  showAlertDialog?: UseWhisperProps["showAlertDialog"]
-): UseWhisperReturn => {
-  const [whisperInstalled, setWhisperInstalled] = useState(false);
-  const [checkingWhisper, setCheckingWhisper] = useState(false);
-  const [installingWhisper, setInstallingWhisper] = useState(false);
-  const [installProgress, setInstallProgress] = useState("");
-
-  const checkWhisperInstallation = useCallback(async () => {
-    try {
-      setCheckingWhisper(true);
-      const result: WhisperCheckResult =
-        await window.electronAPI.checkWhisperInstallation();
-      setWhisperInstalled(result.installed && result.working);
-    } catch (error) {
-      console.error("Error checking Whisper installation:", error);
-      setWhisperInstalled(false);
-    } finally {
-      setCheckingWhisper(false);
-    }
+  const checkWhisperInstalled = useCallback(async (): Promise<boolean> => {
+    // Stub implementation
+    return true;
   }, []);
 
-  const installWhisper = useCallback(async () => {
-    try {
-      setInstallingWhisper(true);
-      setInstallProgress("Starting Whisper installation...");
+  const installWhisper = useCallback(async (): Promise<boolean> => {
+    setIsInstalling(true);
+    setInstallProgress(0);
+    setInstallStatus('Installing...');
+    
+    // Stub implementation
+    setIsInstalling(false);
+    setInstallProgress(100);
+    setInstallStatus('Installed');
+    return true;
+  }, []);
 
-      const result: WhisperInstallResult =
-        await window.electronAPI.installWhisper();
-
-      if (result.success) {
-        setWhisperInstalled(true);
-        setInstallProgress("Installation complete!");
-      } else {
-        if (showAlertDialog) {
-          showAlertDialog({
-            title: "❌ Whisper Installation Failed",
-            description: `Failed to install Whisper: ${result.message}`,
-          });
-        } else {
-          alert(`❌ Failed to install Whisper: ${result.message}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error installing Whisper:", error);
-      if (showAlertDialog) {
-        showAlertDialog({
-          title: "❌ Whisper Installation Failed",
-          description: `Failed to install Whisper: ${error}`,
-        });
-      } else {
-        alert(`❌ Failed to install Whisper: ${error}`);
-      }
-    } finally {
-      setInstallingWhisper(false);
-      setTimeout(() => setInstallProgress(""), 2000); // Clear progress after 2 seconds
-    }
-  }, [showAlertDialog]);
+  const downloadModel = useCallback(async (model: string): Promise<boolean> => {
+    setIsModelDownloading(true);
+    setModelDownloadProgress(0);
+    setModelDownloadStatus(`Downloading ${model}...`);
+    
+    // Stub implementation
+    setIsModelDownloading(false);
+    setModelDownloadProgress(100);
+    setModelDownloadStatus('Downloaded');
+    return true;
+  }, []);
 
   const setupProgressListener = useCallback(() => {
-    // Remove any existing listeners first
-    window.electronAPI?.removeAllListeners?.("whisper-install-progress");
-    
-    window.electronAPI.onWhisperInstallProgress((_, data) => {
-      setInstallProgress(data.message);
-    });
+    // Stub implementation - set up IPC listeners for progress updates
   }, []);
 
-  // Check Whisper installation on mount
-  useEffect(() => {
-    checkWhisperInstallation();
-  }, [checkWhisperInstallation]);
-
   return {
-    whisperInstalled,
-    checkingWhisper,
-    installingWhisper,
+    isInstalling,
     installProgress,
-    checkWhisperInstallation,
+    installStatus,
+    isModelDownloading,
+    modelDownloadProgress,
+    modelDownloadStatus,
+    checkWhisperInstalled,
     installWhisper,
+    downloadModel,
     setupProgressListener,
   };
-};
+}

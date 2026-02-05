@@ -2,8 +2,8 @@ const path = require("path");
 
 // Main dictation window configuration
 const MAIN_WINDOW_CONFIG = {
-  width: 100,
-  height: 100,
+  width: 120,
+  height: 120,
   type: 'panel',
   webPreferences: {
     preload: path.join(__dirname, "..", "..", "preload.js"),
@@ -21,6 +21,7 @@ const MAIN_WINDOW_CONFIG = {
   focusable: true,
   visibleOnAllWorkspaces: true,
   hiddenInMissionControl: false,
+  hasShadow: true,
 };
 
 // Control panel window configuration
@@ -44,7 +45,7 @@ const CONTROL_PANEL_CONFIG = {
     enableClipboardAccess: true,
     clipboard: true,
   },
-  title: "OpenWispr Control Panel",
+  title: "Ollie Control Panel",
   resizable: true,
   show: false,
   titleBarStyle: "hiddenInset",
@@ -62,11 +63,15 @@ const CONTROL_PANEL_CONFIG = {
 class WindowPositionUtil {
   static getMainWindowPosition(display) {
     const { width, height } = MAIN_WINDOW_CONFIG;
+    // Position in bottom-right corner with some padding
     const x = Math.max(
       0,
-      display.bounds.x + display.workArea.width - width - 20
+      display.bounds.x + display.workArea.width - width - 40
     );
-    const y = Math.max(0, display.bounds.y + display.workArea.height);
+    const y = Math.max(
+      0,
+      display.bounds.y + display.workArea.height - height - 40
+    );
     return { x, y, width, height };
   }
 

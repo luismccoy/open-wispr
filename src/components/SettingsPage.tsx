@@ -1,28 +1,609 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { RefreshCw, Download, Keyboard, Mic, Shield } from "lucide-react";
-import WhisperModelPicker from "./WhisperModelPicker";
-import ProcessingModeSelector from "./ui/ProcessingModeSelector";
+import { RefreshCw, Download, Upload, Keyboard, Mic, Shield, Plus, Pencil, Trash2, X, Check } from "lucide-react";
 import ApiKeyInput from "./ui/ApiKeyInput";
 import { ConfirmDialog, AlertDialog } from "./ui/dialog";
 import { useSettings } from "../hooks/useSettings";
 import { useDialogs } from "../hooks/useDialogs";
 import { useAgentName } from "../utils/agentName";
-import { useWhisper } from "../hooks/useWhisper";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
 import { REASONING_PROVIDERS } from "../utils/languages";
+import { useMicrophone } from "../hooks/useMicrophone";
 import LanguageSelector from "./ui/LanguageSelector";
 import PromptStudio from "./ui/PromptStudio";
+import styleManager from "../helpers/styleManager";
+import ConnectionStatusIndicator from "./ui/ConnectionStatusIndicator";
 const InteractiveKeyboard = React.lazy(() => import("./ui/Keyboard"));
+
+// Type for formality styles
+type FormalityStyle = 'formal' | 'casual' | 'neutral';
+
+// Type for app mapping
+interface AppMapping {
+  id: string;
+  pattern: string;
+  style: FormalityStyle;
+  isDefault: boolean;
+}
+
+/**
+ * Style badge component for displaying formality style
+ */
+function StyleBadge({ style }: { style: FormalityStyle }) {
+  const styleConfig = {
+    formal: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Formal' },
+    casual: { bg: 'bg-green-100', text: 'text-green-800', label: 'Casual' },
+    neutral: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Neutral' },
+  };
+  const config = styleConfig[style];
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+      {config.label}
+    </span>
+  );
+}
+
+/**
+ * App Mapping Row Component - displays a single mapping with edit/delete actions
+ */
+interface MappingRowProps {
+  mapping: AppMapping;
+  isEditing: boolean;
+  editPattern: string;
+  editStyle: FormalityStyle;
+  onEditStart: () => void;
+  onEditCancel: () => void;
+  onEditSave: () => void;
+  onDelete: () => void;
+  onPatternChange: (value: string) => void;
+  onStyleChange: (value: FormalityStyle) => void;
+}
+
+function MappingRow({
+  mapping,
+  isEditing,
+  editPattern,
+  editStyle,
+  onEditStart,
+  onEditCancel,
+  onEditSave,
+  onDelete,
+  onPatternChange,
+  onStyleChange,
+}: MappingRowProps) {
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-300">
+        <Input
+          value={editPattern}
+          onChange={(e) => onPatternChange(e.target.value)}
+          placeholder="App name or pattern"
+          className="flex-1 text-sm"
+          autoFocus
+        />
+        <select
+          value={editStyle}
+          onChange={(e) => onStyleChange(e.target.value as FormalityStyle)}
+          className="text-sm border border-gray-300 rounded-md p-2 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+        >
+          <option value="formal">Formal</option>
+          <option value="casual">Casual</option>
+          <option value="neutral">Neutral</option>
+        </select>
+        <button
+          onClick={onEditSave}
+          disabled={!editPattern.trim()}
+          className="p-2 text-green-600 hover:bg-green-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Save"
+        >
+          <Check size={16} />
+        </button>
+        <button
+          onClick={onEditCancel}
+          className="p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+          title="Cancel"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg border ${
+      mapping.isDefault 
+        ? 'bg-gray-50 border-gray-200' 
+        : 'bg-white border-indigo-200'
+    }`}>
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <span className={`font-mono text-sm truncate ${mapping.isDefault ? 'text-gray-600' : 'text-gray-900'}`}>
+          {mapping.pattern}
+        </span>
+        {mapping.isDefault && (
+          <span className="text-xs text-gray-400 shrink-0">(default)</span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <StyleBadge style={mapping.style} />
+        {!mapping.isDefault && (
+          <>
+            <button
+              onClick={onEditStart}
+              className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
+              title="Edit mapping"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+              title="Delete mapping"
+            >
+              <Trash2 size={14} />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Context-Aware Styling Section Component
+ * 
+ * Provides UI for enabling/disabling context-aware styling, configuring
+ * the default style for unmapped applications, and managing app mappings.
+ * 
+ * Uses React state to ensure the toggle visually updates when clicked and
+ * persists the setting to localStorage via styleManager.
+ */
+interface ContextAwareStylingProps {
+  showAlertDialog: (config: { title: string; description: string }) => void;
+}
+
+function ContextAwareStylingSection({ showAlertDialog }: ContextAwareStylingProps) {
+  // React state to track enabled status - ensures UI re-renders on toggle
+  const [isEnabled, setIsEnabled] = useState(() => styleManager.isEnabled());
+  // React state to track default style - ensures UI re-renders on change
+  const [defaultStyle, setDefaultStyle] = useState<FormalityStyle>(() => styleManager.getDefaultStyle() as FormalityStyle);
+  // React state for mappings list
+  const [mappings, setMappings] = useState<AppMapping[]>(() => styleManager.getMappings() as AppMapping[]);
+  // State for adding new mapping
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newPattern, setNewPattern] = useState('');
+  const [newStyle, setNewStyle] = useState<FormalityStyle>('neutral');
+  // State for editing existing mapping
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPattern, setEditPattern] = useState('');
+  const [editStyle, setEditStyle] = useState<FormalityStyle>('neutral');
+  // State for showing default mappings
+  const [showDefaults, setShowDefaults] = useState(false);
+
+  /**
+   * Refresh mappings from styleManager
+   */
+  const refreshMappings = useCallback(() => {
+    setMappings(styleManager.getMappings() as AppMapping[]);
+  }, []);
+
+  /**
+   * Handle exporting mappings to a JSON file
+   */
+  const handleExportMappings = useCallback(() => {
+    try {
+      const json = styleManager.exportMappings();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ollie-app-mappings.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showAlertDialog({
+        title: "Mappings Exported",
+        description: "Your custom app mappings have been exported successfully.",
+      });
+    } catch (error) {
+      showAlertDialog({
+        title: "Export Failed",
+        description: "Failed to export mappings. Please try again.",
+      });
+    }
+  }, [showAlertDialog]);
+
+  /**
+   * Handle importing mappings from a JSON file
+   */
+  const handleImportMappings = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const result = styleManager.importMappings(text);
+        
+        if (result.success) {
+          refreshMappings();
+          showAlertDialog({
+            title: "Mappings Imported",
+            description: result.imported > 0 
+              ? `Successfully imported ${result.imported} mapping${result.imported !== 1 ? 's' : ''}.${result.errors.length > 0 ? ` ${result.errors.length} item(s) skipped.` : ''}`
+              : "No new mappings were imported.",
+          });
+        } else {
+          showAlertDialog({
+            title: "Import Failed",
+            description: result.errors.length > 0 
+              ? `Failed to import mappings: ${result.errors[0]}`
+              : "Failed to import mappings. Please check the file format.",
+          });
+        }
+      } catch (error) {
+        showAlertDialog({
+          title: "Import Failed",
+          description: "Failed to read the file. Please ensure it's a valid JSON file.",
+        });
+      }
+    };
+    
+    input.click();
+  }, [refreshMappings, showAlertDialog]);
+
+  /**
+   * Handle toggle change - updates both React state and localStorage
+   */
+  const handleToggleChange = useCallback((checked: boolean) => {
+    setIsEnabled(checked);
+    styleManager.setEnabled(checked);
+    showAlertDialog({
+      title: checked ? "Context-Aware Styling Enabled" : "Context-Aware Styling Disabled",
+      description: checked 
+        ? "Text will now be styled based on the target application."
+        : "Text will use the default style for all applications.",
+    });
+  }, [showAlertDialog]);
+
+  /**
+   * Handle default style change - updates both React state and localStorage
+   */
+  const handleDefaultStyleChange = useCallback((style: FormalityStyle) => {
+    setDefaultStyle(style);
+    styleManager.setDefaultStyle(style);
+    showAlertDialog({
+      title: "Default Style Updated",
+      description: `Default style set to "${style}" for unmapped applications.`,
+    });
+  }, [showAlertDialog]);
+
+  /**
+   * Handle adding a new mapping
+   */
+  const handleAddMapping = useCallback(() => {
+    if (!newPattern.trim()) return;
+    
+    const mapping = styleManager.addMapping(newPattern.trim(), newStyle);
+    refreshMappings();
+    setIsAddingNew(false);
+    setNewPattern('');
+    setNewStyle('neutral');
+    
+    showAlertDialog({
+      title: "Mapping Added",
+      description: `"${mapping.pattern}" will now use ${mapping.style} style.`,
+    });
+  }, [newPattern, newStyle, refreshMappings, showAlertDialog]);
+
+  /**
+   * Handle starting edit mode for a mapping
+   */
+  const handleEditStart = useCallback((mapping: AppMapping) => {
+    setEditingId(mapping.id);
+    setEditPattern(mapping.pattern);
+    setEditStyle(mapping.style);
+  }, []);
+
+  /**
+   * Handle canceling edit mode
+   */
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    setEditPattern('');
+    setEditStyle('neutral');
+  }, []);
+
+  /**
+   * Handle saving an edited mapping
+   */
+  const handleEditSave = useCallback(() => {
+    if (!editingId || !editPattern.trim()) return;
+    
+    styleManager.updateMapping(editingId, {
+      pattern: editPattern.trim(),
+      style: editStyle,
+    });
+    refreshMappings();
+    setEditingId(null);
+    setEditPattern('');
+    setEditStyle('neutral');
+    
+    showAlertDialog({
+      title: "Mapping Updated",
+      description: `"${editPattern.trim()}" will now use ${editStyle} style.`,
+    });
+  }, [editingId, editPattern, editStyle, refreshMappings, showAlertDialog]);
+
+  /**
+   * Handle deleting a mapping
+   */
+  const handleDeleteMapping = useCallback((mapping: AppMapping) => {
+    const success = styleManager.removeMapping(mapping.id);
+    if (success) {
+      refreshMappings();
+      showAlertDialog({
+        title: "Mapping Deleted",
+        description: `Removed mapping for "${mapping.pattern}".`,
+      });
+    }
+  }, [refreshMappings, showAlertDialog]);
+
+  // Separate custom and default mappings
+  const customMappings = mappings.filter(m => !m.isDefault);
+  const defaultMappings = mappings.filter(m => m.isDefault);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Context-Aware Styling
+        </h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Automatically adjust text formality based on the application you're using.
+          Email clients use formal tone, chat apps use casual tone, and other apps use neutral tone.
+        </p>
+      </div>
+
+      {/* Context-Aware Styling Container */}
+      <div className="space-y-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
+        {/* Enable/Disable Toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium text-indigo-900">
+              Enable Context-Aware Styling
+            </h4>
+            <p className="text-xs text-indigo-700">
+              Automatically detect target app and apply appropriate text style
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={isEnabled}
+              onChange={(e) => handleToggleChange(e.target.checked)}
+              aria-label="Enable context-aware styling"
+            />
+            <div
+              className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                isEnabled ? "bg-indigo-600" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform duration-200 ${
+                  isEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        {/* Default Style Selector */}
+        <div className="pt-4 border-t border-indigo-200">
+          <h4 className="font-medium text-indigo-900 mb-2">
+            Default Style for Unmapped Apps
+          </h4>
+          <p className="text-xs text-indigo-700 mb-3">
+            This style is used when an application doesn't have a specific mapping.
+          </p>
+          <div className="flex gap-2">
+            {(['formal', 'casual', 'neutral'] as const).map((style) => (
+              <button
+                key={style}
+                onClick={() => handleDefaultStyleChange(style)}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  defaultStyle === style
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-indigo-700 border border-indigo-300 hover:bg-indigo-50"
+                }`}
+                aria-pressed={defaultStyle === style}
+              >
+                {style.charAt(0).toUpperCase() + style.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* App Mappings List */}
+        <div className="pt-4 border-t border-indigo-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="font-medium text-indigo-900">
+                Application Mappings
+              </h4>
+              <p className="text-xs text-indigo-700">
+                Configure which text style to use for specific applications.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleImportMappings}
+                size="sm"
+                variant="outline"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                title="Import mappings from file"
+              >
+                <Upload size={14} className="mr-1" />
+                Import
+              </Button>
+              <Button
+                onClick={handleExportMappings}
+                size="sm"
+                variant="outline"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                title="Export mappings to file"
+              >
+                <Download size={14} className="mr-1" />
+                Export
+              </Button>
+              <Button
+                onClick={() => setIsAddingNew(true)}
+                disabled={isAddingNew}
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Plus size={14} className="mr-1" />
+                Add Mapping
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {/* Add New Mapping Form */}
+            {isAddingNew && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-300">
+                <Input
+                  value={newPattern}
+                  onChange={(e) => setNewPattern(e.target.value)}
+                  placeholder="App name or pattern (e.g., 'notion', 'com.apple.*')"
+                  className="flex-1 text-sm"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newPattern.trim()) {
+                      handleAddMapping();
+                    } else if (e.key === 'Escape') {
+                      setIsAddingNew(false);
+                      setNewPattern('');
+                    }
+                  }}
+                />
+                <select
+                  value={newStyle}
+                  onChange={(e) => setNewStyle(e.target.value as FormalityStyle)}
+                  className="text-sm border border-gray-300 rounded-md p-2 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="formal">Formal</option>
+                  <option value="casual">Casual</option>
+                  <option value="neutral">Neutral</option>
+                </select>
+                <button
+                  onClick={handleAddMapping}
+                  disabled={!newPattern.trim()}
+                  className="p-2 text-green-600 hover:bg-green-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Add"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAddingNew(false);
+                    setNewPattern('');
+                  }}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Custom Mappings */}
+            {customMappings.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-indigo-800 uppercase tracking-wide">
+                  Custom Mappings ({customMappings.length})
+                </p>
+                {customMappings.map((mapping) => (
+                  <MappingRow
+                    key={mapping.id}
+                    mapping={mapping}
+                    isEditing={editingId === mapping.id}
+                    editPattern={editPattern}
+                    editStyle={editStyle}
+                    onEditStart={() => handleEditStart(mapping)}
+                    onEditCancel={handleEditCancel}
+                    onEditSave={handleEditSave}
+                    onDelete={() => handleDeleteMapping(mapping)}
+                    onPatternChange={setEditPattern}
+                    onStyleChange={setEditStyle}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State for Custom Mappings */}
+            {customMappings.length === 0 && !isAddingNew && (
+              <div className="bg-white rounded-lg border border-indigo-200 p-4 text-center">
+                <p className="text-sm text-gray-500">
+                  No custom mappings yet. Click "Add Mapping" to create one.
+                </p>
+              </div>
+            )}
+
+            {/* Default Mappings (Collapsible) */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowDefaults(!showDefaults)}
+                className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <span className={`transform transition-transform ${showDefaults ? 'rotate-90' : ''}`}>
+                  ▶
+                </span>
+                Default Mappings ({defaultMappings.length})
+              </button>
+              
+              {showDefaults && (
+                <div className="mt-2 space-y-1.5 pl-4 border-l-2 border-gray-200">
+                  {defaultMappings.map((mapping) => (
+                    <MappingRow
+                      key={mapping.id}
+                      mapping={mapping}
+                      isEditing={false}
+                      editPattern=""
+                      editStyle="neutral"
+                      onEditStart={() => {}}
+                      onEditCancel={() => {}}
+                      onEditSave={() => {}}
+                      onDelete={() => {}}
+                      onPatternChange={() => {}}
+                      onStyleChange={() => {}}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export type SettingsSectionType =
   | "general"
   | "transcription"
   | "aiModels"
   | "agentConfig"
-  | "prompts";
+  | "prompts"
+  | "contextAwareStyling";
 
 interface SettingsPageProps {
   activeSection?: SettingsSectionType;
@@ -42,31 +623,19 @@ export default function SettingsPage({
   } = useDialogs();
 
   const {
-    useLocalWhisper,
-    whisperModel,
-    allowOpenAIFallback,
-    allowLocalFallback,
-    fallbackWhisperModel,
     preferredLanguage,
     useReasoningModel,
     reasoningModel,
     reasoningProvider,
-    openaiApiKey,
     anthropicApiKey,
     awsAccessKeyId,
     awsSecretAccessKey,
     awsRegion,
     dictationKey,
-    setUseLocalWhisper,
-    setWhisperModel,
-    setAllowOpenAIFallback,
-    setAllowLocalFallback,
-    setFallbackWhisperModel,
     setPreferredLanguage,
     setUseReasoningModel,
     setReasoningModel,
     setReasoningProvider,
-    setOpenaiApiKey,
     setAnthropicApiKey,
     setAwsAccessKeyId,
     setAwsSecretAccessKey,
@@ -93,10 +662,10 @@ export default function SettingsPage({
     releaseNotes?: string;
   }>({});
 
-  const whisperHook = useWhisper(showAlertDialog);
   const permissionsHook = usePermissions(showAlertDialog);
   const { pasteFromClipboardWithFallback } = useClipboard(showAlertDialog);
   const { agentName, setAgentName } = useAgentName();
+  const { devices: micDevices, selectedDeviceId: selectedMic, selectDevice: selectMic, refreshDevices: refreshMics, isLoading: micsLoading } = useMicrophone();
 
   // Defer heavy operations for better performance
   useEffect(() => {
@@ -114,11 +683,6 @@ export default function SettingsPage({
         setUpdateStatus(statusResult);
         subscribeToUpdates();
       }
-
-      // Check whisper after initial render
-      if (mounted) {
-        whisperHook.checkWhisperInstallation();
-      }
     }, 100);
 
     return () => {
@@ -132,7 +696,7 @@ export default function SettingsPage({
         window.electronAPI.removeAllListeners?.("update-download-progress");
       }
     };
-  }, [whisperHook]);
+  }, []);
 
   const subscribeToUpdates = () => {
     if (window.electronAPI) {
@@ -170,8 +734,6 @@ export default function SettingsPage({
   const saveReasoningSettings = useCallback(() => {
     updateReasoningSettings({ useReasoningModel, reasoningModel });
     updateApiKeys({
-      ...(reasoningProvider === "openai" &&
-        openaiApiKey.trim() && { openaiApiKey }),
       ...(reasoningProvider === "bedrock" &&
         awsAccessKeyId.trim() && { awsAccessKeyId, awsSecretAccessKey, awsRegion }),
       ...(reasoningProvider === "anthropic" &&
@@ -192,7 +754,6 @@ export default function SettingsPage({
     useReasoningModel,
     reasoningModel,
     reasoningProvider,
-    openaiApiKey,
     anthropicApiKey,
     awsAccessKeyId,
     awsSecretAccessKey,
@@ -202,48 +763,11 @@ export default function SettingsPage({
     showAlertDialog,
   ]);
 
-  const saveApiKey = useCallback(async () => {
-    try {
-      await window.electronAPI?.saveOpenAIKey(openaiApiKey);
-      updateApiKeys({ openaiApiKey });
-      updateTranscriptionSettings({ allowLocalFallback, fallbackWhisperModel });
-
-      try {
-        await window.electronAPI?.createProductionEnvFile(openaiApiKey);
-        showAlertDialog({
-          title: "API Key Saved",
-          description: `OpenAI API key saved successfully! Your credentials have been securely recorded for transcription services.${
-            allowLocalFallback ? " Local Whisper fallback is enabled." : ""
-          }`,
-        });
-      } catch (envError) {
-        showAlertDialog({
-          title: "API Key Saved",
-          description: `OpenAI API key saved successfully and will be available for transcription${
-            allowLocalFallback ? " with Local Whisper fallback enabled" : ""
-          }`,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to save API key:", error);
-      updateApiKeys({ openaiApiKey });
-      updateTranscriptionSettings({ allowLocalFallback, fallbackWhisperModel });
-      showAlertDialog({
-        title: "API Key Saved",
-        description: "OpenAI API key saved to localStorage (fallback mode)",
-      });
-    }
-  }, [
-    openaiApiKey,
-    allowLocalFallback,
-    fallbackWhisperModel,
-    updateApiKeys,
-    updateTranscriptionSettings,
-    showAlertDialog,
-  ]);
+  // Removed saveApiKey function - OpenAI API key handling removed per R3
+  // AWS Transcribe is now the sole transcription method
 
   const resetAccessibilityPermissions = () => {
-    const message = `🔄 RESET ACCESSIBILITY PERMISSIONS\n\nIf you've rebuilt or reinstalled OpenWispr and automatic inscription isn't functioning, you may have obsolete permissions from the previous version.\n\n📋 STEP-BY-STEP RESTORATION:\n\n1️⃣ Open System Settings (or System Preferences)\n   • macOS Ventura+: Apple Menu → System Settings\n   • Older macOS: Apple Menu → System Preferences\n\n2️⃣ Navigate to Privacy & Security → Accessibility\n\n3️⃣ Look for obsolete OpenWispr entries:\n   • Any entries named "OpenWispr"\n   • Any entries named "Electron"\n   • Any entries with unclear or generic names\n   • Entries pointing to old application locations\n\n4️⃣ Remove ALL obsolete entries:\n   • Select each old entry\n   • Click the minus (-) button\n   • Enter your password if prompted\n\n5️⃣ Add the current OpenWispr:\n   • Click the plus (+) button\n   • Navigate to and select the CURRENT OpenWispr app\n   • Ensure the checkbox is ENABLED\n\n6️⃣ Restart OpenWispr completely\n\n💡 This is very common during development when rebuilding applications!\n\nClick OK when you're ready to open System Settings.`;
+    const message = `🔄 RESET ACCESSIBILITY PERMISSIONS\n\nIf you've rebuilt or reinstalled Ollie and automatic inscription isn't functioning, you may have obsolete permissions from the previous version.\n\n📋 STEP-BY-STEP RESTORATION:\n\n1️⃣ Open System Settings (or System Preferences)\n   • macOS Ventura+: Apple Menu → System Settings\n   • Older macOS: Apple Menu → System Preferences\n\n2️⃣ Navigate to Privacy & Security → Accessibility\n\n3️⃣ Look for obsolete Ollie entries:\n   • Any entries named "Ollie"\n   • Any entries named "Electron"\n   • Any entries with unclear or generic names\n   • Entries pointing to old application locations\n\n4️⃣ Remove ALL obsolete entries:\n   • Select each old entry\n   • Click the minus (-) button\n   • Enter your password if prompted\n\n5️⃣ Add the current Ollie:\n   • Click the plus (+) button\n   • Navigate to and select the CURRENT Ollie app\n   • Ensure the checkbox is ENABLED\n\n6️⃣ Restart Ollie completely\n\n💡 This is very common during development when rebuilding applications!\n\nClick OK when you're ready to open System Settings.`;
 
     showConfirmDialog({
       title: "Reset Accessibility Permissions",
@@ -291,7 +815,7 @@ export default function SettingsPage({
                   App Updates
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Keep OpenWispr up to date with the latest features and
+                  Keep Ollie up to date with the latest features and
                   improvements.
                 </p>
               </div>
@@ -542,14 +1066,61 @@ export default function SettingsPage({
               </div>
             </div>
 
+            {/* Microphone Selection */}
+            <div className="border-t pt-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Microphone
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Select which microphone to use for voice dictation.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <select
+                    value={selectedMic}
+                    onChange={(e) => {
+                      selectMic(e.target.value);
+                      showAlertDialog({
+                        title: "Microphone Changed",
+                        description: `Now using: ${micDevices.find(d => d.deviceId === e.target.value)?.label || "System Default"}`,
+                      });
+                    }}
+                    disabled={micsLoading}
+                    className="flex-1 text-sm border border-gray-300 rounded-md p-2 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  >
+                    {micDevices.map((device) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={refreshMics}
+                    variant="outline"
+                    size="sm"
+                    disabled={micsLoading}
+                  >
+                    <RefreshCw size={16} className={micsLoading ? "animate-spin" : ""} />
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {micDevices.length <= 1 
+                    ? "Only the system default microphone is available" 
+                    : `${micDevices.length - 1} microphone${micDevices.length > 2 ? "s" : ""} detected`}
+                </p>
+              </div>
+            </div>
+
             {/* About Section */}
             <div className="border-t pt-8">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  About OpenWispr
+                  About Ollie
                 </h3>
                 <p className="text-sm text-gray-600 mb-6">
-                  OpenWispr converts your speech to text using AI. Press your
+                  Ollie converts your speech to text using AI. Press your
                   hotkey, speak, and we'll type what you said wherever your
                   cursor is.
                 </p>
@@ -610,7 +1181,7 @@ export default function SettingsPage({
                     showConfirmDialog({
                       title: "⚠️ DANGER: Cleanup App Data",
                       description:
-                        "This will permanently delete ALL OpenWispr data including:\n\n• Database and transcriptions\n• Local storage settings\n• Downloaded Whisper models\n• Environment files\n\nYou will need to manually remove app permissions in System Settings.\n\nThis action cannot be undone. Are you sure?",
+                        "This will permanently delete ALL Ollie data including:\n\n• Database and transcriptions\n• Local storage settings\n• Environment files\n\nYou will need to manually remove app permissions in System Settings.\n\nThis action cannot be undone. Are you sure?",
                       onConfirm: () => {
                         window.electronAPI
                           ?.cleanupApp()
@@ -652,38 +1223,15 @@ export default function SettingsPage({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Speech to Text Processing
               </h3>
-              <ProcessingModeSelector
-                useLocalWhisper={useLocalWhisper}
-                setUseLocalWhisper={(value) => {
-                  setUseLocalWhisper(value);
-                  updateTranscriptionSettings({ useLocalWhisper: value });
-                }}
-              />
+              <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <h4 className="font-medium text-green-900">☁️ AWS Transcribe (Streaming)</h4>
+                <p className="text-sm text-green-700">
+                  Using AWS Transcribe Streaming for fast, real-time speech-to-text. 
+                  Credentials are loaded from your AWS configuration (~/.aws/credentials).
+                </p>
+                <ConnectionStatusIndicator className="mt-2" />
+              </div>
             </div>
-
-            {!useLocalWhisper && (
-              <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <h4 className="font-medium text-blue-900">OpenAI API Setup</h4>
-                <ApiKeyInput
-                  apiKey={openaiApiKey}
-                  setApiKey={setOpenaiApiKey}
-                  helpText="Get your API key from platform.openai.com"
-                />
-              </div>
-            )}
-
-            {useLocalWhisper && whisperHook.whisperInstalled && (
-              <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                <h4 className="font-medium text-purple-900">
-                  Local Whisper Model
-                </h4>
-                <WhisperModelPicker
-                  selectedModel={whisperModel}
-                  onModelSelect={setWhisperModel}
-                  variant="settings"
-                />
-              </div>
-            )}
 
             <div className="space-y-4 p-4 bg-gray-50 border border-gray-200 rounded-xl">
               <h4 className="font-medium text-gray-900">Preferred Language</h4>
@@ -692,34 +1240,60 @@ export default function SettingsPage({
                 onChange={(value) => {
                   setPreferredLanguage(value);
                   updateTranscriptionSettings({ preferredLanguage: value });
+                  // Also save to transcribeLanguage for streaming audio manager (R4)
+                  localStorage.setItem("transcribeLanguage", value);
                 }}
                 className="w-full"
               />
+              <p className="text-xs text-gray-500">
+                "Auto-detect (Recommended)" uses AWS Transcribe's automatic language identification.
+                Select a specific language to override auto-detection.
+              </p>
             </div>
 
             <Button
               onClick={() => {
                 updateTranscriptionSettings({
-                  useLocalWhisper,
-                  whisperModel,
                   preferredLanguage,
                 });
 
-                if (!useLocalWhisper && openaiApiKey.trim()) {
-                  updateApiKeys({ openaiApiKey });
-                }
-
                 showAlertDialog({
                   title: "Settings Saved",
-                  description: `Transcription mode: ${
-                    useLocalWhisper ? "Local Whisper" : "OpenAI API"
-                  }. Language: ${preferredLanguage}.`,
+                  description: `Transcription: AWS Transcribe Streaming. Language: ${preferredLanguage}.`,
                 });
               }}
               className="w-full"
             >
               Save Transcription Settings
             </Button>
+
+            {/* Debug Section */}
+            <div className="mt-8 p-4 bg-gray-100 border border-gray-300 rounded-xl">
+              <h4 className="font-medium text-gray-700 mb-2 text-sm">🔧 Debug Info</h4>
+              <div className="text-xs text-gray-600 space-y-1 mb-3 font-mono">
+                <p>useReasoningModel: {String(useReasoningModel)} (localStorage: {localStorage.getItem("useReasoningModel") || "null"})</p>
+                <p>reasoningModel: {reasoningModel}</p>
+                <p>preferredLanguage: {preferredLanguage}</p>
+              </div>
+              <Button
+                onClick={() => {
+                  // Refresh connection status
+                  window.electronAPI?.connectionHealthCheck?.().then((result: { healthy: boolean; error?: string }) => {
+                    showAlertDialog({
+                      title: "Connection Status",
+                      description: result.healthy 
+                        ? "✅ AWS connections are healthy and ready." 
+                        : `⚠️ Connection issue: ${result.error || 'Unknown error'}`,
+                    });
+                  });
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+              >
+                Check AWS Connection Status
+              </Button>
+            </div>
           </div>
         );
 
@@ -735,16 +1309,6 @@ export default function SettingsPage({
                 This handles commands like "scratch that", creates proper lists,
                 and fixes obvious errors while preserving your natural tone.
               </p>
-
-              {useLocalWhisper && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-amber-800">
-                    <span className="font-medium">Note:</span> AI text
-                    enhancement requires API access and is currently only
-                    available when using cloud-based providers.
-                  </p>
-                </div>
-              )}
 
               <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-xl">
                 <div>
@@ -822,24 +1386,13 @@ export default function SettingsPage({
                   </p>
                 </div>
 
-                {reasoningProvider === "openai" && (
-                  <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <h4 className="font-medium text-blue-900">
-                      OpenAI API Key
-                    </h4>
-                    <ApiKeyInput
-                      apiKey={openaiApiKey}
-                      setApiKey={setOpenaiApiKey}
-                      helpText="Same as your transcription API key"
-                    />
-                  </div>
-                )}
-
                 {reasoningProvider === "bedrock" && (
                   <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                    <h4 className="font-medium text-orange-900">
-                      AWS Bedrock Credentials
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-orange-900">
+                        AWS Bedrock Credentials
+                      </h4>
+                      <ConnectionStatusIndicator className="ml-2" />
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs text-orange-700 mb-1">Access Key ID</label>
@@ -873,8 +1426,39 @@ export default function SettingsPage({
                       </div>
                     </div>
                     <p className="text-xs text-orange-600">
-                      Uses Claude models via AWS Bedrock. Get credentials from AWS IAM.
+                      Uses Claude models via AWS Bedrock. Leave credentials empty to use ~/.aws/credentials.
                     </p>
+                    <Button
+                      onClick={async () => {
+                        showAlertDialog({
+                          title: "Testing Bedrock...",
+                          description: "Sending test request to AWS Bedrock...",
+                        });
+                        try {
+                          console.log('[Settings] Testing Bedrock with model:', reasoningModel);
+                          const result = await window.electronAPI?.invokeBedrockModel({
+                            modelId: reasoningModel,
+                            text: "Say 'Bedrock connection successful!' in exactly those words.",
+                            region: awsRegion || "us-east-1",
+                          });
+                          console.log('[Settings] Bedrock test result:', result);
+                          showAlertDialog({
+                            title: "✅ Bedrock Works!",
+                            description: `Response: ${result?.substring(0, 200) || "No response"}`,
+                          });
+                        } catch (error: any) {
+                          console.error('[Settings] Bedrock test error:', error);
+                          showAlertDialog({
+                            title: "❌ Bedrock Error",
+                            description: `Error: ${error.message}\n\nMake sure you have valid AWS credentials (run 'ada credentials update' or check ~/.aws/credentials)`,
+                          });
+                        }
+                      }}
+                      variant="outline"
+                      className="w-full mt-2 border-orange-400 text-orange-700 hover:bg-orange-100"
+                    >
+                      🧪 Test Bedrock Connection
+                    </Button>
                   </div>
                 )}
 
@@ -913,6 +1497,50 @@ export default function SettingsPage({
             <Button onClick={saveReasoningSettings} className="w-full">
               Save AI Model Settings
             </Button>
+
+            {/* Direct Bedrock Test - Always visible */}
+            <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-xl">
+              <h4 className="font-bold text-yellow-800 mb-2">🔧 Debug: Direct Bedrock Test</h4>
+              <p className="text-xs text-yellow-700 mb-3">
+                Current provider: {reasoningProvider} | Model: {reasoningModel}
+              </p>
+              <Button
+                onClick={async () => {
+                  const testModel = "anthropic.claude-3-haiku-20240307-v1:0";
+                  console.log('[DEBUG] =====================================');
+                  console.log('[DEBUG] Testing Bedrock directly');
+                  console.log('[DEBUG] Model:', testModel);
+                  console.log('[DEBUG] =====================================');
+                  
+                  showAlertDialog({
+                    title: "Testing Bedrock...",
+                    description: `Calling ${testModel}...`,
+                  });
+                  
+                  try {
+                    const result = await window.electronAPI?.invokeBedrockModel({
+                      modelId: testModel,
+                      text: "Reply with exactly: BEDROCK WORKS",
+                      region: "us-east-1",
+                    });
+                    console.log('[DEBUG] Bedrock SUCCESS:', result);
+                    showAlertDialog({
+                      title: "✅ BEDROCK WORKS!",
+                      description: `Response: ${result}`,
+                    });
+                  } catch (error: any) {
+                    console.error('[DEBUG] Bedrock FAILED:', error);
+                    showAlertDialog({
+                      title: "❌ Bedrock Failed",
+                      description: error.message,
+                    });
+                  }
+                }}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+              >
+                🧪 TEST BEDROCK NOW
+              </Button>
+            </div>
           </div>
         );
 
@@ -1012,7 +1640,7 @@ export default function SettingsPage({
                 AI Prompt Management
               </h3>
               <p className="text-sm text-gray-600 mb-6">
-                View and customize the prompts that power OpenWispr's AI text processing. 
+                View and customize the prompts that power Ollie's AI text processing. 
                 Adjust these to change how your transcriptions are formatted and enhanced.
               </p>
             </div>
@@ -1020,6 +1648,9 @@ export default function SettingsPage({
             <PromptStudio />
           </div>
         );
+
+      case "contextAwareStyling":
+        return <ContextAwareStylingSection showAlertDialog={showAlertDialog} />;
       default:
         return null;
     }

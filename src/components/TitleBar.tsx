@@ -17,16 +17,16 @@ export default function TitleBar({
 }: TitleBarProps) {
   return (
     <div
-      className={`bg-white border-b border-gray-100 select-none ${className}`}
+      className={`bg-[var(--color-card)] border-b border-[var(--color-border)] select-none ${className}`}
     >
       <div
         className="flex items-center justify-between h-12 px-4"
-        style={{ WebkitAppRegion: "drag" }}
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
         {/* Left section - title or custom content */}
         <div className="flex items-center gap-2">
           {showTitle && title && (
-            <h1 className="text-sm font-semibold text-gray-900">{title}</h1>
+            <h1 className="text-sm font-semibold text-[var(--color-foreground)]">{title}</h1>
           )}
           {children}
         </div>
@@ -34,7 +34,7 @@ export default function TitleBar({
         {/* Right section - actions */}
         <div 
           className="flex items-center gap-2"
-          style={{ WebkitAppRegion: "no-drag" }}
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           {actions}
         </div>
